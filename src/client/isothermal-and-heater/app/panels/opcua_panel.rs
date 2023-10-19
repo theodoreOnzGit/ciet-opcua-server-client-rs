@@ -13,6 +13,12 @@ impl GuiClient {
     pub fn opcua_panel_ui(&mut self, ui: &mut Ui) {
 
         ui.separator();
+        ui.horizontal(|ui| {
+            ui.label("IP Address for Server (IPv4): ");
+            ui.text_edit_singleline(
+                self.opcua_server_ip_addr.lock().unwrap().deref_mut());
+        });
+        ui.separator();
         ui.add(egui::Spinner::new());
         // slider changes the user input value
         // and we release the mutex lock immediately

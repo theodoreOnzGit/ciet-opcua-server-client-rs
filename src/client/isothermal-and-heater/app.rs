@@ -32,6 +32,8 @@ pub struct GuiClient {
     pub opcua_input: Arc<Mutex<f32>>,
     #[serde(skip)] 
     pub opcua_output: Arc<Mutex<f32>>,
+    #[serde(skip)] 
+    pub opcua_server_ip_addr: Arc<Mutex<String>>,
 
     pub opcua_plots_ptr: Arc<Mutex<Vec<[f64;3]>>>,
     // selected panel for graph plotting 
@@ -66,6 +68,8 @@ impl Default for GuiClient {
             opcua_plots_ptr: Arc::new(
                 Mutex::new(vec![])
             ),
+            opcua_server_ip_addr: Arc::new(Mutex::new(
+                "127.0.0.1".to_string())),
         }
     }
 }

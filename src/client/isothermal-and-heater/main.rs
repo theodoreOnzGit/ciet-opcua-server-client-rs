@@ -32,6 +32,7 @@ fn main() -> eframe::Result<()> {
     let opcua_input_clone = gui_app.opcua_input.clone();
     let opcua_output_clone = gui_app.opcua_output.clone();
     let opcua_plots_ptr_clone = gui_app.opcua_plots_ptr.clone();
+    let opcua_ip_addr_ptr_clone = gui_app.opcua_server_ip_addr.clone();
 
     // let's make a first order transfer fn 
     let mut g_s = FirstOrderTransferFn::new(
@@ -98,9 +99,15 @@ fn main() -> eframe::Result<()> {
         // now, normally it should be well connected, if not, then 
         // retry 
         loop {
+
+            let ip_addr: String = opcua_ip_addr_ptr_clone.lock().unwrap().deref_mut()
+            .to_string();
+            let endpoint: String = "opc.tcp://".to_owned()
+            +&ip_addr+":4840/rust_ciet_opcua_server";
+
             if let Err(_) = connection_result.clone() {
                 connection_result = try_connect_to_server_and_run_client(
-                    "opc.tcp://10.25.199.152:4840/rust_ciet_opcua_server",
+                    &endpoint,
                     2,
                     opcua_input_clone.clone(),
                     opcua_output_clone.clone());
