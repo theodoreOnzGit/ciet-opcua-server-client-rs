@@ -59,9 +59,10 @@ pub fn construct_and_run_ciet_server(run_server: bool){
     let ctah_branch_valve_node = NodeId::new(ns, "ctah_branch_valve_open");
 
     // Here are an additional 3 variables for calculation time
-    let calculation_time_node = NodeId::new(ns, "calculation_time");
+    let fluid_calculation_time_node = NodeId::new(ns, "fluid_calculation_time");
     let initiation_time_node = NodeId::new(ns, "ciet_obj_construction_time");
-    let total_calc_time_node = NodeId::new(ns, "construction_time_plus_calc_time");
+    let fluid_total_calc_time_node = NodeId::new(ns, "construction_time_plus_calc_time");
+    let heater_calculation_time_node = NodeId::new(ns, "heater_calculation_time");
 
     // And then some more variables for 
     // (1) manometer reading error
@@ -103,19 +104,22 @@ pub fn construct_and_run_ciet_server(run_server: bool){
                 Variable::new(&dhx_branch_mass_flowrate_node, 
                               "dhx_branch_mass_flowrate_kg_per_s_FM20", 
                               "dhx_branch_mass_flowrate_kg_per_s_FM20", 0 as f64),
-                Variable::new(&calculation_time_node, 
+                Variable::new(&fluid_calculation_time_node, 
                               "calculation_time_ms", 
                               "calculation_time_ms", 0 as f64),
                 Variable::new(&initiation_time_node, 
                               "ciet_obj_construction_time_ms", 
                               "ciet_obj_construction_time_ms", 0 as f64),
-                Variable::new(&total_calc_time_node, 
-                              "construction_time_plus_calc_time_ms", 
-                              "construction_time_plus_calc_time_ms", 0 as f64),
+                Variable::new(&fluid_total_calc_time_node, 
+                              "fluid_construction_time_plus_calc_time_ms", 
+                              "fluid_construction_time_plus_calc_time_ms", 0 as f64),
                 Variable::new(&bt12_temperature_node, 
                 "bt12_temperature_degC_heater_outlet", 
                 "bt12_temperature_degC_heater_outlet", 
                 79.12 as f64),
+                Variable::new(&heater_calculation_time_node, 
+                "heater_calculation_time_ms", 
+                "heater_calculation_time_ms", 0 as f64),
             ],
             &sample_folder_id,
         );
@@ -331,7 +335,7 @@ pub fn construct_and_run_ciet_server(run_server: bool){
         // step 4, update values into nodes
         let now = DateTime::now();
         let _ = address_space_lock.set_variable_value(
-            calculation_time_node.clone(), 
+            fluid_calculation_time_node.clone(), 
             calc_time_taken_milleseconds as f64,
             &now, 
             &now);
@@ -350,7 +354,7 @@ pub fn construct_and_run_ciet_server(run_server: bool){
 
         let now = DateTime::now();
         let _ = address_space_lock.set_variable_value(
-            total_calc_time_node.clone(), 
+            fluid_total_calc_time_node.clone(), 
             total_time_taken as f64,
             &now, 
             &now);
@@ -882,11 +886,26 @@ pub fn construct_and_run_ciet_server(run_server: bool){
         // that's it!
 
 
-        let _time_taken_for_calculation_loop = loop_time.elapsed().unwrap()
+        let time_taken_for_calculation_loop = loop_time.elapsed().unwrap()
         - loop_time_start;
         // probably want to add a node for heater loop time taken
 
+
         //dbg!(time_taken_for_calculation_loop);
+        {
+            let mut address_space_lock = address_space.write();
+
+            let heater_calculation_time_ms: f64  = 
+            time_taken_for_calculation_loop.as_micros() as f64
+            /1000.0;
+
+            let now = DateTime::now();
+            let _ = address_space_lock.set_variable_value(
+                heater_calculation_time_node.clone(), 
+                heater_calculation_time_ms as f64,
+                &now, 
+                &now);
+        }
     };
 
     
