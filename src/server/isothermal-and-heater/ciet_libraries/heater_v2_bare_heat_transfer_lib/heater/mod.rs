@@ -683,7 +683,7 @@ pub fn example_heater(){
             structural_support_heater_top_head.
                 advance_timestep_thread_spawn(timestep);
 
-            structural_support_mx_10._advance_timestep(
+            structural_support_mx_10.advance_timestep(
                 timestep);
 
             structural_support_heater_bottom_head 

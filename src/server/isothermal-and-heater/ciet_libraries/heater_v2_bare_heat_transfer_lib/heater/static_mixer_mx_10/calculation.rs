@@ -11,7 +11,7 @@ use super::StaticMixerMX10;
 impl StaticMixerMX10 {
     /// advances timestep for each HeatTransferEntity within the 
     /// HeaterVersion2Bare
-    pub fn _advance_timestepp(&mut self, 
+    pub fn advance_timestep(&mut self, 
     timestep: Time) {
 
         self.therminol_array.advance_timestep_mut_self(timestep).unwrap();

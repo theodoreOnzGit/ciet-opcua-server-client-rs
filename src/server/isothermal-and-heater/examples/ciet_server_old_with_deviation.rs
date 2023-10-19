@@ -625,15 +625,13 @@ pub fn construct_and_run_ciet_server(run_server: bool){
         = heater_v2_bare_shared_ptr.lock() 
         .unwrap().steel_shell.clone().try_into().unwrap();
 
-        let heater_surface_array_temp: Vec<ThermodynamicTemperature> = 
-        heater_surface_array_clone.get_temperature_vector().unwrap();
 
         // heater top head exit temperature for comparison
         let heater_top_head_bare_therminol_clone: FluidArray = 
         heater_top_head_bare_shared_ptr.lock().unwrap()
             .therminol_array.clone().try_into().unwrap();
 
-        let heater_top_head_exit_temperature: ThermodynamicTemperature = 
+        let _heater_top_head_exit_temperature: ThermodynamicTemperature = 
         heater_top_head_bare_therminol_clone.get_temperature_vector()
             .unwrap().into_iter().last().unwrap();
 
@@ -643,7 +641,7 @@ pub fn construct_and_run_ciet_server(run_server: bool){
         static_mixer_mx_10_object_shared_ptr.
             lock().unwrap().therminol_array.clone().try_into().unwrap();
 
-        let static_mixer_exit_temperature: ThermodynamicTemperature
+        let _static_mixer_exit_temperature: ThermodynamicTemperature
         = static_mixer_therminol_clone.get_temperature_vector().unwrap()
             .into_iter().last().unwrap();
 
@@ -792,7 +790,94 @@ pub fn construct_and_run_ciet_server(run_server: bool){
             support_conductance_interaction
         ).unwrap();
 
+        // link struct supports to heater top/bottom heads
+        structural_support_heater_top_head_shared_ptr.lock().unwrap().
+            support_array.link_to_back(
+                &mut heater_top_head_bare_shared_ptr.lock().unwrap().steel_shell,
+                support_conductance_interaction
+            ).unwrap();
+        structural_support_heater_bottom_head_shared_ptr.lock().unwrap(). 
+            support_array.link_to_back(
+                &mut heater_bottom_head_bare_shared_ptr.lock().unwrap().steel_shell,
+                support_conductance_interaction
+            ).unwrap();
 
+        structural_support_mx_10_shared_ptr.lock().unwrap().support_array.link_to_back(
+            &mut static_mixer_mx_10_pipe_shared_ptr.lock().unwrap().steel_shell,
+            support_conductance_interaction
+        ).unwrap();
+
+        // note, the heater top and bottom head area changed 
+        // during course of this interaction, so should be okay
+
+
+        // i will also connect heater shell to the structural support 
+        // via the head as in ciet 
+
+        heater_v2_bare_shared_ptr.lock().unwrap().steel_shell.link_to_back(
+            &mut heater_bottom_head_bare_shared_ptr.lock().unwrap().steel_shell,
+            support_conductance_interaction
+        ).unwrap();
+
+        heater_v2_bare_shared_ptr.lock().unwrap().steel_shell.link_to_front(
+            &mut heater_top_head_bare_shared_ptr.lock().unwrap().steel_shell,
+            support_conductance_interaction
+        ).unwrap();
+
+        // probably edit this to include twisted tape conductance
+        heater_v2_bare_shared_ptr.lock().unwrap().twisted_tape_interior.link_to_back(
+            &mut heater_bottom_head_bare_shared_ptr.lock().unwrap().twisted_tape_interior,
+            support_conductance_interaction
+        ).unwrap();
+
+        heater_v2_bare_shared_ptr.lock().unwrap().twisted_tape_interior.link_to_front(
+            &mut heater_top_head_bare_shared_ptr.lock().unwrap().twisted_tape_interior,
+            support_conductance_interaction
+        ).unwrap();
+
+        // now link it laterally to ambient temperatures
+        structural_support_heater_top_head_shared_ptr.lock().unwrap().
+            lateral_and_miscellaneous_connections();
+        structural_support_heater_bottom_head_shared_ptr.lock().unwrap(). 
+            lateral_and_miscellaneous_connections();
+
+        structural_support_mx_10_shared_ptr.lock().unwrap().
+            lateral_and_miscellaneous_connections();
+
+        // advance timesteps
+        heater_v2_bare_shared_ptr.lock().unwrap().
+            advance_timestep(timestep);
+
+        heater_bottom_head_bare_shared_ptr.lock().unwrap(). 
+            advance_timestep(
+                timestep);
+
+        heater_top_head_bare_shared_ptr.lock().unwrap()
+            .advance_timestep(timestep);
+
+        static_mixer_mx_10_object_shared_ptr.lock().unwrap()
+            .advance_timestep(timestep);
+
+        static_mixer_mx_10_pipe_shared_ptr.lock().unwrap().advance_timestep(
+            timestep);
+
+
+        structural_support_heater_bottom_head_shared_ptr.lock().unwrap().
+            advance_timestep(timestep);
+        structural_support_heater_top_head_shared_ptr.lock().unwrap().
+            advance_timestep(timestep);
+
+        structural_support_mx_10_shared_ptr.lock().unwrap().advance_timestep(
+            timestep);
+
+        // that's it!
+
+
+        let time_taken_for_calculation_loop = loop_time.elapsed().unwrap()
+        - loop_time_start;
+        // probably want to add a node for heater loop time taken
+
+        //dbg!(time_taken_for_calculation_loop);
     };
 
     

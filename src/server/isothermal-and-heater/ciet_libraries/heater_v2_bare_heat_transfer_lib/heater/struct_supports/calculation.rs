@@ -8,7 +8,7 @@ use super::StructuralSupport;
 impl StructuralSupport {
     /// advances timestep for each HeatTransferEntity within the 
     /// HeaterVersion2Bare
-    pub fn _advance_timestep(&mut self, 
+    pub fn advance_timestep(&mut self, 
     timestep: Time) {
 
         self.support_array.advance_timestep_mut_self(timestep).unwrap();
