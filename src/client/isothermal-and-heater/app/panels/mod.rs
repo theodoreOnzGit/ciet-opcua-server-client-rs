@@ -11,6 +11,21 @@ pub mod opcua_panel;
 impl GuiClient {
     pub fn simple_panel_ui(&mut self, ui: &mut Ui) {
 
+        ui.heading(" 3.6 Roentgen... Not great not terrible");
+
+        ui.horizontal(|ui| {
+            ui.label("Write something: ");
+            ui.text_edit_singleline(&mut self.label);
+        });
+
+        let mut binding = self.rad_value_ptr.lock().unwrap();
+        let rad_value_ptr_clone = binding.deref_mut();
+
+        ui.add(egui::Slider::new(rad_value_ptr_clone, 0.0..=15000.0).
+            text("Roentgen/hr"));
+        if ui.button("Increment").clicked() {
+            *rad_value_ptr_clone += 1.0;
+        }
         ui.add(egui::Spinner::new());
         let mut my_plot = Plot::new("My Plot").legend(Legend::default());
 

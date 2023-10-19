@@ -1,4 +1,4 @@
-use std::ops::DerefMut;
+//use std::ops::DerefMut;
 use std::sync::Mutex;
 use std::sync::Arc;
 
@@ -148,23 +148,8 @@ impl eframe::App for GuiClient {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
-            ui.heading(" 3.6 Roentgen... Not great not terrible");
+            ui.heading("OPC-UA GUI Client and Real-time Plot Demos in Written in Rust");
 
-            ui.horizontal(|ui| {
-                ui.label("Write something: ");
-                ui.text_edit_singleline(&mut self.label);
-            });
-
-            let mut binding = self.rad_value_ptr.lock().unwrap();
-            let rad_value_ptr_clone = binding.deref_mut();
-
-            ui.add(egui::Slider::new(rad_value_ptr_clone, 0.0..=15000.0).
-                text("Roentgen/hr"));
-            if ui.button("Increment").clicked() {
-                *rad_value_ptr_clone += 1.0;
-            }
-            // get rid of mutable ref
-            drop(binding);
             // separator and select panel
             ui.separator();
             ui.horizontal( 

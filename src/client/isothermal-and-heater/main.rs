@@ -1,5 +1,5 @@
 pub mod app;
-use std::ops::Deref;
+//use std::ops::Deref;
 use local_ip_address::local_ip;
 
 pub use app::*;
