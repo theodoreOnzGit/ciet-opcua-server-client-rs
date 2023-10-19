@@ -517,57 +517,73 @@ pub fn construct_and_run_ciet_server(run_server: bool){
         number_of_inner_temperature_nodes
     )));
 
-    let heater_top_head_bare: HeaterTopBottomHead 
-    = HeaterTopBottomHead::new_top_head(
-        initial_temperature,
-        ambient_air_temp);
+    let heater_top_head_bare_shared_ptr
+    = Arc::new(Mutex::new(
+        HeaterTopBottomHead::new_top_head(
+            initial_temperature,
+            ambient_air_temp)));
 
-    let heater_bottom_head_bare: HeaterTopBottomHead 
-    = HeaterTopBottomHead::new_bottom_head(
+    let heater_bottom_head_bare_shared_ptr
+    = Arc::new(Mutex::new(
+        HeaterTopBottomHead::new_bottom_head(
         initial_temperature,
-        ambient_air_temp);
+        ambient_air_temp)));
 
     // static mixers
-    let static_mixer_mx_10_object: StaticMixerMX10 
-    = StaticMixerMX10::new_static_mixer(
+    let static_mixer_mx_10_object_shared_ptr
+    = Arc::new(Mutex::new(
+        StaticMixerMX10::new_static_mixer(
         initial_temperature,
-        ambient_air_temp);
+        ambient_air_temp)));
 
-    let static_mixer_mx_10_pipe: StaticMixerMX10 
-    = StaticMixerMX10::new_static_mixer_pipe(
+    let static_mixer_mx_10_pipe_shared_ptr
+    = Arc::new(Mutex::new(StaticMixerMX10::new_static_mixer_pipe(
         initial_temperature,
-        ambient_air_temp);
+        ambient_air_temp)));
 
     // structural support
     let struct_support_equiv_diameter: Length = Length::new::<inch>(0.5);
     let struc_support_equiv_length: Length = Length::new::<uom::si::length::foot>(1.0);
 
 
-    let mut structural_support_heater_top_head = 
+    let mut structural_support_heater_top_head_shared_ptr = 
+    Arc::new(Mutex::new(
     StructuralSupport::new_steel_support_cylinder(
         struc_support_equiv_length,
         struct_support_equiv_diameter,
         initial_temperature,
-        ambient_air_temp);
+        ambient_air_temp)));
 
     let structural_support_heater_bottom_head = 
-    structural_support_heater_top_head.clone();
+    structural_support_heater_top_head_shared_ptr.lock().unwrap().clone();
+
+    let structural_support_heater_bottom_head_shared_ptr = 
+    Arc::new(Mutex::new(structural_support_heater_bottom_head));
 
     let structural_support_mx_10 = 
-    structural_support_heater_top_head.clone();
+    structural_support_heater_top_head_shared_ptr.lock().unwrap().clone();
 
-    let inlet_bc: HeatTransferEntity = BCType::new_const_temperature( 
-        inlet_temperature).into();
+    let structural_support_mx_10_shared_ptr = 
+    Arc::new(Mutex::new(structural_support_mx_10));
 
-    let outlet_bc: HeatTransferEntity = BCType::new_adiabatic_bc().into();
+    let inlet_bc_shared_ptr: Arc<Mutex<HeatTransferEntity>> 
+    = Arc::new(Mutex::new(BCType::new_const_temperature( 
+        inlet_temperature).into()));
+
+    let outlet_bc: Arc<Mutex<HeatTransferEntity>> = 
+    Arc::new(Mutex::new(
+        BCType::new_adiabatic_bc().into()));
 
     let approx_support_conductance: ThermalConductance = 
-    structural_support_heater_top_head.get_axial_node_to_bc_conductance();
+    structural_support_heater_top_head_shared_ptr.lock().unwrap()
+        .get_axial_node_to_bc_conductance();
 
-
+    // struct support conductance assumed constant
+    // kind of negligible so doesn't matter
     let support_conductance_interaction = HeatTransferInteractionType::
         UserSpecifiedThermalConductance(approx_support_conductance);
 
+    // mass flowrate constant
     let mass_flowrate = MassRate::new::<kilogram_per_second>(0.18);
     // main loop for ciet heater
 
@@ -610,7 +626,8 @@ pub fn construct_and_run_ciet_server(run_server: bool){
 
         // heater top head exit temperature for comparison
         let heater_top_head_bare_therminol_clone: FluidArray = 
-        heater_top_head_bare.therminol_array.clone().try_into().unwrap();
+        heater_top_head_bare_shared_ptr.lock().unwrap()
+            .therminol_array.clone().try_into().unwrap();
 
         let heater_top_head_exit_temperature: ThermodynamicTemperature = 
         heater_top_head_bare_therminol_clone.get_temperature_vector()
@@ -619,14 +636,16 @@ pub fn construct_and_run_ciet_server(run_server: bool){
         // BT-12: static mixer outlet temperature
 
         let static_mixer_therminol_clone: FluidArray = 
-        static_mixer_mx_10_object.therminol_array.clone().try_into().unwrap();
+        static_mixer_mx_10_object_shared_ptr.
+            lock().unwrap().therminol_array.clone().try_into().unwrap();
 
         let static_mixer_exit_temperature: ThermodynamicTemperature
         = static_mixer_therminol_clone.get_temperature_vector().unwrap()
             .into_iter().last().unwrap();
 
         let static_mixer_pipe_therminol_clone: FluidArray = 
-        static_mixer_mx_10_pipe.therminol_array.clone().try_into().unwrap();
+        static_mixer_mx_10_pipe_shared_ptr.lock().unwrap()
+            .therminol_array.clone().try_into().unwrap();
 
 
         // for advection interactions, because I assume boussineseq 
