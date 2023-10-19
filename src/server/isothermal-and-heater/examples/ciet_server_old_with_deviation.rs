@@ -8,7 +8,7 @@ use thermal_hydraulics_rs::prelude::alpha_nightly::*;
 use uom::si::power::kilowatt;
 
 use super::ciet_functions_for_deviation_calcs::*;
-use std::{time::{Instant, self, SystemTime}, thread};
+use std::{time::{Instant, self, SystemTime}, thread, sync::{Arc, Mutex}};
 use crate::heater::{*, struct_supports::StructuralSupport};
 //use opcua::server::address_space;
 
@@ -510,28 +510,30 @@ pub fn construct_and_run_ciet_server(run_server: bool){
     let number_of_inner_temperature_nodes: usize = 6;
 
 
-    let mut heater_v2_bare = HeaterVersion2Bare::new_dewet_model(
+    let heater_v2_bare_shared_ptr = Arc::new(Mutex::new(
+        HeaterVersion2Bare::new_dewet_model(
         initial_temperature,
         ambient_air_temp,
         number_of_inner_temperature_nodes
-    );
-    let mut heater_top_head_bare: HeaterTopBottomHead 
+    )));
+
+    let heater_top_head_bare: HeaterTopBottomHead 
     = HeaterTopBottomHead::new_top_head(
         initial_temperature,
         ambient_air_temp);
 
-    let mut heater_bottom_head_bare: HeaterTopBottomHead 
+    let heater_bottom_head_bare: HeaterTopBottomHead 
     = HeaterTopBottomHead::new_bottom_head(
         initial_temperature,
         ambient_air_temp);
 
     // static mixers
-    let mut static_mixer_mx_10_object: StaticMixerMX10 
+    let static_mixer_mx_10_object: StaticMixerMX10 
     = StaticMixerMX10::new_static_mixer(
         initial_temperature,
         ambient_air_temp);
 
-    let mut static_mixer_mx_10_pipe: StaticMixerMX10 
+    let static_mixer_mx_10_pipe: StaticMixerMX10 
     = StaticMixerMX10::new_static_mixer_pipe(
         initial_temperature,
         ambient_air_temp);
@@ -548,16 +550,16 @@ pub fn construct_and_run_ciet_server(run_server: bool){
         initial_temperature,
         ambient_air_temp);
 
-    let mut structural_support_heater_bottom_head = 
+    let structural_support_heater_bottom_head = 
     structural_support_heater_top_head.clone();
 
-    let mut structural_support_mx_10 = 
+    let structural_support_mx_10 = 
     structural_support_heater_top_head.clone();
 
-    let mut inlet_bc: HeatTransferEntity = BCType::new_const_temperature( 
+    let inlet_bc: HeatTransferEntity = BCType::new_const_temperature( 
         inlet_temperature).into();
 
-    let mut outlet_bc: HeatTransferEntity = BCType::new_adiabatic_bc().into();
+    let outlet_bc: HeatTransferEntity = BCType::new_adiabatic_bc().into();
 
     let approx_support_conductance: ThermalConductance = 
     structural_support_heater_top_head.get_axial_node_to_bc_conductance();
@@ -591,7 +593,8 @@ pub fn construct_and_run_ciet_server(run_server: bool){
         // this is needed for heated section 
         // bulk outlet temperature
         let mut therminol_array_clone: FluidArray 
-        = heater_v2_bare.therminol_array.clone().try_into().unwrap();
+        = heater_v2_bare_shared_ptr.lock().unwrap().
+            therminol_array.clone().try_into().unwrap();
 
 
         let heater_fluid_bulk_temp: ThermodynamicTemperature = 
@@ -599,7 +602,8 @@ pub fn construct_and_run_ciet_server(run_server: bool){
 
         // this is needed for heater surface temperatures
         let heater_surface_array_clone: SolidColumn 
-        = heater_v2_bare.steel_shell.clone().try_into().unwrap();
+        = heater_v2_bare_shared_ptr.lock() 
+        .unwrap().steel_shell.clone().try_into().unwrap();
 
         let heater_surface_array_temp: Vec<ThermodynamicTemperature> = 
         heater_surface_array_clone.get_temperature_vector().unwrap();
