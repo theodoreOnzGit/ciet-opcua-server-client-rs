@@ -578,6 +578,10 @@ pub fn construct_and_run_ciet_server(run_server: bool){
     structural_support_heater_top_head_shared_ptr.lock().unwrap()
         .get_axial_node_to_bc_conductance();
 
+    let mut ambient_air_temp_bc_shared_ptr: 
+    Arc<Mutex<HeatTransferEntity>> = Arc::new(Mutex::new(
+        inlet_bc_shared_ptr.lock().unwrap().clone()
+    ));
     // struct support conductance assumed constant
     // kind of negligible so doesn't matter
     let support_conductance_interaction = HeatTransferInteractionType::
@@ -766,6 +770,27 @@ pub fn construct_and_run_ciet_server(run_server: bool){
         static_mixer_mx_10_pipe_shared_ptr.lock().unwrap().
             lateral_and_miscellaneous_connections(
             mass_flowrate);
+
+
+        // link struct supports to ambient air
+        // axially 
+        structural_support_heater_bottom_head_shared_ptr.lock().unwrap(). 
+            support_array.link_to_front(
+                &mut ambient_air_temp_bc_shared_ptr.lock().unwrap(),
+                support_conductance_interaction
+            ).unwrap();
+
+        structural_support_heater_top_head_shared_ptr.lock().unwrap(). 
+            support_array.link_to_front(
+                &mut ambient_air_temp_bc_shared_ptr.lock().unwrap(),
+                support_conductance_interaction
+            ).unwrap();
+
+        structural_support_mx_10_shared_ptr.lock().unwrap()
+            .support_array.link_to_front(
+                &mut ambient_air_temp_bc_shared_ptr.lock().unwrap(),
+            support_conductance_interaction
+        ).unwrap();
 
 
     };
