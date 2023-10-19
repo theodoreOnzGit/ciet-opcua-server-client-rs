@@ -13,7 +13,8 @@ name = "server"
 path = "src/server/bin/main.rs"
 
 [dependencies]
-opcua = "0.11.0"
+opcua = { git = "https://github.com/locka99/opcua", version = "0.12.0" }
+roots = "0.0.8"
 thermal_hydraulics_rs = "0.0.9"
 
 
