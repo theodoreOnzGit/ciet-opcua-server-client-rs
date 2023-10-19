@@ -399,8 +399,11 @@ pub fn print_value(item: &MonitoredItem) {
 }
 pub fn try_connect_to_server_and_run_client(endpoint: &str,
     ns: u16,
-    opcua_input_ptr: Arc<Mutex<f32>>,
-    opcua_output_ptr: Arc<Mutex<f32>>) -> Result<(),StatusCode>{
+    loop_pressure_drop_input_ptr: Arc<Mutex<f32>>,
+    isothermal_mass_flow_output_ptr: Arc<Mutex<f32>>,
+    bt12_temp_deg_c_output_ptr: Arc<Mutex<f32>>,
+    bt11_temp_deg_c_input_ptr: Arc<Mutex<f32>>,
+) -> Result<(),StatusCode>{
 
     // Make the client configuration
     let mut client = ClientBuilder::new()
@@ -431,6 +434,9 @@ pub fn try_connect_to_server_and_run_client(endpoint: &str,
     let heater_branch_mass_flowrate_node = NodeId::new(ns, "heater_branch_flowrate");
     let calculation_time_node = NodeId::new(ns, "calculation_time");
     let ctah_pump_pressure_node = NodeId::new(ns, "ctah_pump_pressure");
+    let bt11_temperature_node = NodeId::new(ns, "bt11_temperature_degC");
+    let bt12_temperature_node = NodeId::new(ns, "bt12_temperature_degC");
+    let heater_power_node = NodeId::new(ns, "heater_power_kilowatts");
 
     // i will also need another thread to run the polling loop 
 
@@ -446,12 +452,15 @@ pub fn try_connect_to_server_and_run_client(endpoint: &str,
                         ctah_pump_pressure_node.clone().into(),
                         calculation_time_node.clone().into(),
                         heater_branch_mass_flowrate_node.clone().into(),
+                        bt11_temperature_node.clone().into(),
+                        heater_power_node.clone().into(),
+                        bt12_temperature_node.clone().into(),
                     ], TimestampsToReturn::Both, 1.0)
                     .unwrap();
                 //let value = &results[0];
 
                 // now lock the mutex 
-                let mut output_to_gui = opcua_output_ptr.lock().unwrap();
+                let mut heater_mass_flowrate_to_gui = isothermal_mass_flow_output_ptr.lock().unwrap();
 
                 // obtain the heater_branch_flowrate, which should be 
                 // index 3
@@ -463,27 +472,59 @@ pub fn try_connect_to_server_and_run_client(endpoint: &str,
                     .unwrap().as_f64().unwrap()
                     as f32;
 
-                *output_to_gui = heater_branch_flowrate;
+                *heater_mass_flowrate_to_gui = heater_branch_flowrate;
 
+                // now for bt12, do the same 
+                let mut heater_exit_temp_to_gui = 
+                bt12_temp_deg_c_output_ptr.lock().unwrap();
 
-                //dbg!(heater_br_flow_data_value);
+                let bt12_exit_temp_data_val = &results[6];
+
+                let bt12_exit_temp_deg_c: f32 = 
+                bt12_exit_temp_data_val.value.clone().unwrap()
+                    .as_f64().unwrap() as f32;
+
+                *heater_exit_temp_to_gui = bt12_exit_temp_deg_c;
+
             }
 
             // now for the writing part, we take the user input pressure 
             // drop
 
             {
+                // first, get user inputs
                 let user_input_pressure_drop: f32 = 
-                    opcua_input_ptr.lock().unwrap().to_owned();
-                // now mutex lock the session, 
-                let session_lock = session.read();
-                let _ = session_lock
-                    .write(&[WriteValue {
+                loop_pressure_drop_input_ptr.lock().unwrap().to_owned();
+
+                let user_input_heater_inlet_temp: f32 = 
+                bt11_temp_deg_c_input_ptr.lock().unwrap().to_owned();
+
+
+                // next, create the write values
+                let ctah_pump_node_write: WriteValue = WriteValue {
                         node_id: ctah_pump_pressure_node.clone(),
                         attribute_id: AttributeId::Value as u32,
                         index_range: UAString::null(),
                         value: Variant::Float(user_input_pressure_drop).into(),
-                    }])
+                    };
+
+
+                let heater_inlet_temp_node_write: WriteValue = WriteValue {
+                        node_id: bt11_temperature_node.clone(),
+                        attribute_id: AttributeId::Value as u32,
+                        index_range: UAString::null(),
+                        value: Variant::Float(user_input_heater_inlet_temp).into(),
+                    };
+
+                // now mutex lock the session, 
+                let session_lock = session.read();
+                // put write values into the write session lock
+
+                let _ = session_lock
+                    .write(&[
+                        ctah_pump_node_write,
+                        heater_inlet_temp_node_write,
+                    ])
                     .unwrap();
             }
 

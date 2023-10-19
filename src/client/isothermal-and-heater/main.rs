@@ -107,7 +107,9 @@ fn main() -> eframe::Result<()> {
             &endpoint,
             2,
             opcua_input_clone.clone(),
-            opcua_output_clone.clone());
+            opcua_output_clone.clone(),
+            bt12_temp_deg_c_ptr_clone.clone(),
+        bt11_temp_deg_c_ptr_clone.clone());
 
         // now, normally it should be well connected, if not, then 
         // retry 
@@ -123,7 +125,9 @@ fn main() -> eframe::Result<()> {
                     &endpoint,
                     2,
                     opcua_input_clone.clone(),
-                    opcua_output_clone.clone());
+                    opcua_output_clone.clone(),
+                    bt12_temp_deg_c_ptr_clone.clone(),
+                bt11_temp_deg_c_ptr_clone.clone());
 
             }
 
