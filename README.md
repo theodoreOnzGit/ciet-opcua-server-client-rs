@@ -16,6 +16,26 @@ For client, you will need all libraries for eframe, egui and OPC-UA
 ```bash
 cargo run --bin client
 ```
+## prerequisites
+
+For the server, on the Linux end, you will need openssl and openblas.
+
+For Arch Linux based systems:
+```bash
+sudo pacman -S openblas
+```
+
+For Ubuntu based systems:
+```bash
+sudo apt install libopenblas-dev
+```
+
+For the client, on the windows end, you will also need openssl.
+Openssl does not release binaries on its github page. However, 
+some people have precompiled binaries online, download at your own risk.
+
+
+
 
 ## licenses
 

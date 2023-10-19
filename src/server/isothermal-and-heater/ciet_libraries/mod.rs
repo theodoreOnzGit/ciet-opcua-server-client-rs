@@ -24,5 +24,6 @@ pub mod branch;
 pub mod isothermal_ciet_facility;
 pub use isothermal_ciet_facility::*;
 
-
-
+/// contains code for the ciet heater v2.0 bare
+pub mod heater_v2_bare_heat_transfer_lib;
+pub use heater_v2_bare_heat_transfer_lib::*;
