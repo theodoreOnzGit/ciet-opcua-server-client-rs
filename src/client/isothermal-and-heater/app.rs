@@ -29,9 +29,9 @@ pub struct GuiClient {
 
     // for input and output of opcua server and client
     #[serde(skip)] 
-    pub opcua_input: Arc<Mutex<f32>>,
+    pub loop_pressure_drop_pump_pressure_pascals_input: Arc<Mutex<f32>>,
     #[serde(skip)] 
-    pub opcua_output: Arc<Mutex<f32>>,
+    pub mass_flowrate_kg_per_s_output: Arc<Mutex<f32>>,
     #[serde(skip)] 
     pub opcua_server_ip_addr: Arc<Mutex<String>>,
 
@@ -63,8 +63,8 @@ impl Default for GuiClient {
             input_output_plots_ptr: Arc::new(
                 Mutex::new(vec![])
             ),
-            opcua_input: Arc::new(Mutex::new(0.0)),
-            opcua_output: Arc::new(Mutex::new(0.0)),
+            loop_pressure_drop_pump_pressure_pascals_input: Arc::new(Mutex::new(0.0)),
+            mass_flowrate_kg_per_s_output: Arc::new(Mutex::new(0.0)),
             opcua_plots_ptr: Arc::new(
                 Mutex::new(vec![])
             ),

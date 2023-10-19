@@ -23,7 +23,7 @@ impl GuiClient {
         // slider changes the user input value
         // and we release the mutex lock immediately
         {
-            let mut binding = self.opcua_input.lock().unwrap();
+            let mut binding = self.loop_pressure_drop_pump_pressure_pascals_input.lock().unwrap();
             let user_input_value = binding.deref_mut();
             ui.add(egui::Slider::new(user_input_value, -20000.0..=20000.0).
                 text("user loop pressure drop input (Pa)"));
@@ -192,7 +192,7 @@ impl GuiClient {
         // slider changes the user input value
         // and we release the mutex lock immediately
         {
-            let mut binding = self.opcua_input.lock().unwrap();
+            let mut binding = self.loop_pressure_drop_pump_pressure_pascals_input.lock().unwrap();
             let user_input_value = binding.deref_mut();
             ui.add(egui::Slider::new(user_input_value, -20000.0..=20000.0).
                 text("user loop pressure drop input (Pa)"));
@@ -409,7 +409,7 @@ pub fn try_connect_to_server_and_run_client(endpoint: &str,
         .product_uri("urn:SimpleClient")
         .trust_server_certs(true)
         .create_sample_keypair(true)
-        .session_retry_limit(3)
+        .session_retry_limit(5)
         .client()
         .unwrap();
 

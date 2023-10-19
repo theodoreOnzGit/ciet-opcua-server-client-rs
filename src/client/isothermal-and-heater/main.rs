@@ -29,8 +29,8 @@ fn main() -> eframe::Result<()> {
 
     // for opcua 
 
-    let opcua_input_clone = gui_app.opcua_input.clone();
-    let opcua_output_clone = gui_app.opcua_output.clone();
+    let opcua_input_clone = gui_app.loop_pressure_drop_pump_pressure_pascals_input.clone();
+    let opcua_output_clone = gui_app.mass_flowrate_kg_per_s_output.clone();
     let opcua_plots_ptr_clone = gui_app.opcua_plots_ptr.clone();
     let opcua_ip_addr_ptr_clone = gui_app.opcua_server_ip_addr.clone();
 
@@ -90,8 +90,14 @@ fn main() -> eframe::Result<()> {
 
         // this is a simple connection loop, but doesn't reconnect 
         // if there is a disconnection
+
+        let ip_addr: String = opcua_ip_addr_ptr_clone.lock().unwrap().deref_mut()
+            .to_string();
+        let endpoint: String = "opc.tcp://".to_owned()
+        +&ip_addr+":4840/rust_ciet_opcua_server";
+
         let mut connection_result = try_connect_to_server_and_run_client(
-            "opc.tcp://10.25.199.152:4840abcde/rust_ciet_opcua_server",
+            &endpoint,
             2,
             opcua_input_clone.clone(),
             opcua_output_clone.clone());
