@@ -3,7 +3,6 @@ use std::time::{Instant, Duration};
 use crate::{ctah_branch::*, therminol_component::TherminolCustomComponent, HeaterBranch, 
     DHXBranch};
 
-use thermal_hydraulics_rs::prelude::alpha_nightly::*;
 extern crate roots;
 use roots::find_root_brent;
 use roots::SimpleConvergency;
