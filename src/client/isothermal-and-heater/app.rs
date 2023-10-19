@@ -27,15 +27,28 @@ pub struct GuiClient {
 
     pub input_output_plots_ptr: Arc<Mutex<Vec<[f64;3]>>>,
 
-    // for input and output of opcua server and client
+    // for input and output of isothermal ciet opcua server anc client
     #[serde(skip)] 
     pub loop_pressure_drop_pump_pressure_pascals_input: Arc<Mutex<f32>>,
     #[serde(skip)] 
     pub mass_flowrate_kg_per_s_output: Arc<Mutex<f32>>,
     #[serde(skip)] 
     pub opcua_server_ip_addr: Arc<Mutex<String>>,
+    pub isothermal_ciet_plots_ptr: Arc<Mutex<Vec<[f64;3]>>>,
 
-    pub opcua_plots_ptr: Arc<Mutex<Vec<[f64;3]>>>,
+    // for input and output of heater v2 bare simulation
+    #[serde(skip)] 
+    pub bt11_temp_deg_c: Arc<Mutex<f32>>,
+    #[serde(skip)] 
+    pub bt12_temp_deg_c: Arc<Mutex<f32>>,
+    #[serde(skip)] 
+    pub heater_power_kilowatts: Arc<Mutex<f32>>,
+
+    // it will be arranged [time, bt11, heater_power, bt12]
+    // this is because fluid flows from inlet (bt11) 
+    // gets heated by heater_power 
+    // and exits at bt12
+    pub heater_v2_bare_ciet_plots_ptr: Arc<Mutex<Vec<[f64;4]>>>,
     // selected panel for graph plotting 
     open_panel:  Panel,
 }
@@ -65,11 +78,19 @@ impl Default for GuiClient {
             ),
             loop_pressure_drop_pump_pressure_pascals_input: Arc::new(Mutex::new(0.0)),
             mass_flowrate_kg_per_s_output: Arc::new(Mutex::new(0.0)),
-            opcua_plots_ptr: Arc::new(
+            isothermal_ciet_plots_ptr: Arc::new(
                 Mutex::new(vec![])
             ),
             opcua_server_ip_addr: Arc::new(Mutex::new(
                 "127.0.0.1".to_string())),
+            bt11_temp_deg_c: Arc::new(Mutex::new(79.12)),
+            bt12_temp_deg_c: Arc::new(Mutex::new(79.12)),
+            heater_power_kilowatts: Arc::new(Mutex::new(8.5)),
+            heater_v2_bare_ciet_plots_ptr: Arc::new(
+                Mutex::new(vec![])
+            ),
+
+
         }
     }
 }

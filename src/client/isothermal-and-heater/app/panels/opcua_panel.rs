@@ -42,7 +42,7 @@ impl GuiClient {
 
         // let's create a line in the plot
         let opcua_plot_pts: Vec<[f64;3]> = self.
-            opcua_plots_ptr.lock().unwrap().deref_mut()
+            isothermal_ciet_plots_ptr.lock().unwrap().deref_mut()
             .iter().map(|&values|{
                 values}
             ).collect();
@@ -124,7 +124,7 @@ impl GuiClient {
             );
             let _ = match index_result {
                 Some(index) => {
-                    self.opcua_plots_ptr.lock().unwrap().deref_mut().remove(index);
+                    self.isothermal_ciet_plots_ptr.lock().unwrap().deref_mut().remove(index);
                 },
                 None => {
                     // do nothing 
@@ -211,7 +211,7 @@ impl GuiClient {
 
         // let's create a line in the plot
         let opcua_plot_pts: Vec<[f64;3]> = self.
-            opcua_plots_ptr.lock().unwrap().deref_mut()
+            isothermal_ciet_plots_ptr.lock().unwrap().deref_mut()
             .iter().map(|&values|{
                 values}
             ).collect();
@@ -293,7 +293,7 @@ impl GuiClient {
             );
             let _ = match index_result {
                 Some(index) => {
-                    self.opcua_plots_ptr.lock().unwrap().deref_mut().remove(index);
+                    self.isothermal_ciet_plots_ptr.lock().unwrap().deref_mut().remove(index);
                 },
                 None => {
                     // do nothing 

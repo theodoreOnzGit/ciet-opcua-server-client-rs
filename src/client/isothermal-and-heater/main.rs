@@ -1,4 +1,6 @@
 pub mod app;
+use std::ops::Deref;
+
 pub use app::*;
 fn main() -> eframe::Result<()> {
 
@@ -31,8 +33,13 @@ fn main() -> eframe::Result<()> {
 
     let opcua_input_clone = gui_app.loop_pressure_drop_pump_pressure_pascals_input.clone();
     let opcua_output_clone = gui_app.mass_flowrate_kg_per_s_output.clone();
-    let opcua_plots_ptr_clone = gui_app.opcua_plots_ptr.clone();
+    let isothermal_ciet_plot_ptr_clone = gui_app.isothermal_ciet_plots_ptr.clone();
     let opcua_ip_addr_ptr_clone = gui_app.opcua_server_ip_addr.clone();
+
+    let bt12_temp_deg_c_ptr_clone = gui_app.bt12_temp_deg_c.clone();
+    let bt11_temp_deg_c_ptr_clone = gui_app.bt11_temp_deg_c.clone();
+    let heater_power_kilowatts_ptr_clone = gui_app.heater_power_kilowatts.clone();
+    let heater_v2_bare_ciet_plots_ptr_clone = gui_app.heater_v2_bare_ciet_plots_ptr.clone();
 
     // let's make a first order transfer fn 
     let mut g_s = FirstOrderTransferFn::new(
@@ -123,14 +130,34 @@ fn main() -> eframe::Result<()> {
             let time_elapsed_ms = time_now.elapsed().unwrap().as_millis();
             let time_elapsed_s: f64 = time_elapsed_ms as f64 / 1000 as f64;
 
-            let opcua_input: f32 = 
+            let loop_pressure_drop_pascals: f32 = 
                 opcua_input_clone.lock().unwrap().deref_mut().clone();
-            let opcua_output: f32 = 
+            let mass_flowrate_kg_per_s: f32 = 
                 opcua_output_clone.lock().unwrap().deref_mut().clone();
 
-            opcua_plots_ptr_clone.lock().unwrap().deref_mut()
-                .push([time_elapsed_s,opcua_input as f64,
-                opcua_output as f64]);
+            isothermal_ciet_plot_ptr_clone.lock().unwrap().deref_mut()
+                .push([
+                    time_elapsed_s,
+                    loop_pressure_drop_pascals as f64,
+                    mass_flowrate_kg_per_s as f64
+                ]);
+
+            let bt11_temp_deg_c: f32 = 
+            bt11_temp_deg_c_ptr_clone.lock().unwrap().deref_mut().clone();
+            let bt12_temp_deg_c: f32 = 
+            bt12_temp_deg_c_ptr_clone.lock().unwrap().deref_mut().clone();
+            let heater_power_kilowatts: f32 = 
+            heater_power_kilowatts_ptr_clone.lock().unwrap().deref_mut().clone();
+            
+            heater_v2_bare_ciet_plots_ptr_clone.lock().unwrap().deref_mut()
+                .push([
+                    time_elapsed_s,
+                    bt11_temp_deg_c as f64,
+                    heater_power_kilowatts as f64,
+                    bt12_temp_deg_c as f64,
+                ]);
+
+
             
 
             thread::sleep(time::Duration::from_millis(100));
