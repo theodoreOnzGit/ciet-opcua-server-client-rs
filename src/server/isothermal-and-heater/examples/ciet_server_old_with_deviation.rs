@@ -8,7 +8,7 @@ use thermal_hydraulics_rs::prelude::alpha_nightly::*;
 use uom::si::power::kilowatt;
 
 use super::ciet_functions_for_deviation_calcs::*;
-use std::{time::{Instant, self, SystemTime}, thread, sync::{Arc, Mutex}};
+use std::{time::{Instant, SystemTime}, sync::{Arc, Mutex}};
 use crate::heater::{*, struct_supports::StructuralSupport};
 //use opcua::server::address_space;
 
@@ -546,7 +546,7 @@ pub fn construct_and_run_ciet_server(run_server: bool){
     let struc_support_equiv_length: Length = Length::new::<uom::si::length::foot>(1.0);
 
 
-    let mut structural_support_heater_top_head_shared_ptr = 
+    let structural_support_heater_top_head_shared_ptr = 
     Arc::new(Mutex::new(
     StructuralSupport::new_steel_support_cylinder(
         struc_support_equiv_length,
@@ -578,7 +578,7 @@ pub fn construct_and_run_ciet_server(run_server: bool){
     structural_support_heater_top_head_shared_ptr.lock().unwrap()
         .get_axial_node_to_bc_conductance();
 
-    let mut ambient_air_temp_bc_shared_ptr: 
+    let ambient_air_temp_bc_shared_ptr: 
     Arc<Mutex<HeatTransferEntity>> = Arc::new(Mutex::new(
         inlet_bc_shared_ptr.lock().unwrap().clone()
     ));
@@ -621,7 +621,7 @@ pub fn construct_and_run_ciet_server(run_server: bool){
         therminol_array_clone.try_get_bulk_temperature().unwrap();
 
         // this is needed for heater surface temperatures
-        let heater_surface_array_clone: SolidColumn 
+        let _heater_surface_array_clone: SolidColumn 
         = heater_v2_bare_shared_ptr.lock() 
         .unwrap().steel_shell.clone().try_into().unwrap();
 
@@ -668,7 +668,7 @@ pub fn construct_and_run_ciet_server(run_server: bool){
         let heater_power: Power;
         let heater_inlet_temp: ThermodynamicTemperature;
         {
-            let mut address_space_lock = address_space.write();
+            let address_space_lock = address_space.write();
             let bt11_user_input_value_deg_c = address_space_lock.
                 get_variable_value(
                     bt11_temperature_node.clone())
@@ -677,6 +677,15 @@ pub fn construct_and_run_ciet_server(run_server: bool){
 
             heater_inlet_temp = ThermodynamicTemperature::new::
                 <degree_celsius>(bt11_user_input_value_deg_c);
+
+            let user_set_inlet_bc: HeatTransferEntity = 
+            BCType::new_const_temperature( 
+                heater_inlet_temp).into();
+            // change inlet bc ptr 
+
+            inlet_bc_shared_ptr.lock().unwrap().set(
+                user_set_inlet_bc).unwrap();
+
 
             let heater_user_input_value_kilowatts = address_space_lock.
                 get_variable_value(
@@ -873,7 +882,7 @@ pub fn construct_and_run_ciet_server(run_server: bool){
         // that's it!
 
 
-        let time_taken_for_calculation_loop = loop_time.elapsed().unwrap()
+        let _time_taken_for_calculation_loop = loop_time.elapsed().unwrap()
         - loop_time_start;
         // probably want to add a node for heater loop time taken
 

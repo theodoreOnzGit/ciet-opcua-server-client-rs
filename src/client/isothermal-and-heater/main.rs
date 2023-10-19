@@ -25,7 +25,6 @@ fn main() -> eframe::Result<()> {
 
     // for input output plot
     let user_input_ptr_clone = gui_app.user_input.clone();
-    let model_output_ptr_clone = gui_app.model_output.clone();
     let input_output_plots_ptr_clone = gui_app.input_output_plots_ptr.clone();
 
     // for opcua 
@@ -35,8 +34,7 @@ fn main() -> eframe::Result<()> {
     let opcua_plots_ptr_clone = gui_app.opcua_plots_ptr.clone();
 
     // let's make a first order transfer fn 
-    let mut g_s = FirstOrderTransferFn::default();
-    g_s = FirstOrderTransferFn::new(
+    let mut g_s = FirstOrderTransferFn::new(
         1.0, 
         Time::new::<second>(1.0), 
         0.0, 
@@ -84,7 +82,6 @@ fn main() -> eframe::Result<()> {
     });
 
     // this is the portion where we do opc-ua
-    use opcua::client::prelude::*;
 
     // move client into the thread
     // plus the pointers
