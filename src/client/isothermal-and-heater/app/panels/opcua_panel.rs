@@ -403,6 +403,7 @@ pub fn try_connect_to_server_and_run_client(endpoint: &str,
     isothermal_mass_flow_output_ptr: Arc<Mutex<f32>>,
     bt12_temp_deg_c_output_ptr: Arc<Mutex<f32>>,
     bt11_temp_deg_c_input_ptr: Arc<Mutex<f32>>,
+    heater_power_kilowatts_input_ptr: Arc<Mutex<f32>>,
 ) -> Result<(),StatusCode>{
 
     // Make the client configuration
@@ -499,6 +500,9 @@ pub fn try_connect_to_server_and_run_client(endpoint: &str,
                 let user_input_heater_inlet_temp: f32 = 
                 bt11_temp_deg_c_input_ptr.lock().unwrap().to_owned();
 
+                let user_input_heater_power_kilowatts: f32 = 
+                heater_power_kilowatts_input_ptr.lock().unwrap().to_owned();
+
 
                 // next, create the write values
                 let ctah_pump_node_write: WriteValue = WriteValue {
@@ -516,6 +520,12 @@ pub fn try_connect_to_server_and_run_client(endpoint: &str,
                         value: Variant::Float(user_input_heater_inlet_temp).into(),
                     };
 
+                let heater_power_node_write: WriteValue = WriteValue {
+                        node_id: bt11_temperature_node.clone(),
+                        attribute_id: AttributeId::Value as u32,
+                        index_range: UAString::null(),
+                        value: Variant::Float(user_input_heater_power_kilowatts).into(),
+                    };
                 // now mutex lock the session, 
                 let session_lock = session.read();
                 // put write values into the write session lock
@@ -524,6 +534,7 @@ pub fn try_connect_to_server_and_run_client(endpoint: &str,
                     .write(&[
                         ctah_pump_node_write,
                         heater_inlet_temp_node_write,
+                        heater_power_node_write,
                     ])
                     .unwrap();
             }
