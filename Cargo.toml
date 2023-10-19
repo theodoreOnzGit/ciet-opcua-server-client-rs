@@ -13,6 +13,7 @@ name = "server"
 path = "src/server/bin/main.rs"
 
 [dependencies]
+opcua = "0.11.0"
 thermal_hydraulics_rs = "0.0.9"
 
 
