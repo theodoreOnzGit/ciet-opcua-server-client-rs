@@ -5,9 +5,11 @@ use local_ip_address::local_ip;
 use opcua::server::config;
 
 use thermal_hydraulics_rs::prelude::alpha_nightly::*;
+use uom::si::power::kilowatt;
 
 use super::ciet_functions_for_deviation_calcs::*;
-use std::{time::{Instant, self}, thread};
+use std::{time::{Instant, self, SystemTime}, thread};
+use crate::heater::{*, struct_supports::StructuralSupport};
 //use opcua::server::address_space;
 
 /// In this example, we use the legacy ciet server codes used in maturin
@@ -44,9 +46,9 @@ pub fn construct_and_run_ciet_server(run_server: bool){
     // The user should be able to adjust bt11_temperature and 
     // heater power, 
     // and consequently, observe bt12_temperature
-    let bt11_temperature = NodeId::new(ns, "bt11_temperature_degC");
-    let bt12_temperature = NodeId::new(ns, "bt12_temperature_degC");
-    let heater_power = NodeId::new(ns, "heater_power_kilowatts");
+    let bt11_temperature_node = NodeId::new(ns, "bt11_temperature_degC");
+    let bt12_temperature_node = NodeId::new(ns, "bt12_temperature_degC");
+    let heater_power_node = NodeId::new(ns, "heater_power_kilowatts");
 
 
 
@@ -110,7 +112,7 @@ pub fn construct_and_run_ciet_server(run_server: bool){
                 Variable::new(&total_calc_time_node, 
                               "construction_time_plus_calc_time_ms", 
                               "construction_time_plus_calc_time_ms", 0 as f64),
-                Variable::new(&bt12_temperature, 
+                Variable::new(&bt12_temperature_node, 
                 "bt12_temperature_degC_heater_outlet", 
                 "bt12_temperature_degC_heater_outlet", 
                 79.12 as f64),
@@ -189,7 +191,7 @@ pub fn construct_and_run_ciet_server(run_server: bool){
             .organized_by(&folder_id)
             .insert(&mut address_space);
 
-        VariableBuilder::new(&bt11_temperature, 
+        VariableBuilder::new(&bt11_temperature_node, 
             "bt11_temperature_degC_heater_inlet", 
             "bt11_temperature_degC_heater_inlet")
             .data_type(DataTypeId::Float)
@@ -198,7 +200,7 @@ pub fn construct_and_run_ciet_server(run_server: bool){
             .organized_by(&folder_id)
             .insert(&mut address_space);
 
-        VariableBuilder::new(&heater_power, 
+        VariableBuilder::new(&heater_power_node, 
             "heater_power_kilowatts", 
             "heater_power_kilowatts")
             .data_type(DataTypeId::Float)
@@ -237,6 +239,9 @@ pub fn construct_and_run_ciet_server(run_server: bool){
     // EVERY timestep in addition to calculation
     //
     // but if it works, it works
+
+    // clone address space for ciet loop
+    let address_space_clone = address_space.clone();
     let calculate_flowrate_and_pressure_loss = move || {
 
         // construct CIET
@@ -245,20 +250,20 @@ pub fn construct_and_run_ciet_server(run_server: bool){
 
         let start_of_calc_time = Instant::now();
 
-        let mut address_space = address_space.write();
+        let mut address_space_lock = address_space_clone.write();
         
         // step 1, find the correct node object for 
         // pump pressure and the
         // boolean for valve control open or close
         let ctah_pump_node = ctah_pump_pressure_node.clone();
-        let pump_pressure_value = address_space.
+        let pump_pressure_value = address_space_lock.
             get_variable_value(ctah_pump_node).unwrap();
         let pump_pressure_value: f64 = pump_pressure_value.
             value.unwrap().as_f64().unwrap();
 
         // now for heater valve, ctah valve and dhx valve
         // control
-        let heater_valve_open = address_space.
+        let heater_valve_open = address_space_lock.
             get_variable_value(heater_branch_valve_node.clone()).unwrap();
         let heater_valve_open = 
             heater_valve_open.value.unwrap();
@@ -282,11 +287,11 @@ pub fn construct_and_run_ciet_server(run_server: bool){
             match_true_false(heater_valve_open);
         
 
-        let dhx_valve_open = address_space.
+        let dhx_valve_open = address_space_lock.
             get_variable_value(dhx_branch_valve_node.clone()).unwrap().value.unwrap();
         let dhx_valve_open:bool = match_true_false(dhx_valve_open);
 
-        let ctah_valve_open = address_space.
+        let ctah_valve_open = address_space_lock.
             get_variable_value(ctah_branch_valve_node.clone()).unwrap().value.unwrap();
         let ctah_valve_open:bool = match_true_false(ctah_valve_open);
         
@@ -325,7 +330,7 @@ pub fn construct_and_run_ciet_server(run_server: bool){
 
         // step 4, update values into nodes
         let now = DateTime::now();
-        let _ = address_space.set_variable_value(
+        let _ = address_space_lock.set_variable_value(
             calculation_time_node.clone(), 
             calc_time_taken_milleseconds as f64,
             &now, 
@@ -335,7 +340,7 @@ pub fn construct_and_run_ciet_server(run_server: bool){
             initiation_duration.as_millis().try_into().unwrap();
 
         let now = DateTime::now();
-        let _ = address_space.set_variable_value(
+        let _ = address_space_lock.set_variable_value(
             initiation_time_node.clone(), 
             initiation_time_taken_millseconds as f64,
             &now, 
@@ -344,7 +349,7 @@ pub fn construct_and_run_ciet_server(run_server: bool){
             calc_time_taken_milleseconds + initiation_time_taken_millseconds;
 
         let now = DateTime::now();
-        let _ = address_space.set_variable_value(
+        let _ = address_space_lock.set_variable_value(
             total_calc_time_node.clone(), 
             total_time_taken as f64,
             &now, 
@@ -352,21 +357,21 @@ pub fn construct_and_run_ciet_server(run_server: bool){
 
         
         let now = DateTime::now();
-        let _ = address_space.set_variable_value(
+        let _ = address_space_lock.set_variable_value(
             ctah_branch_mass_flowrate_node.clone(), 
             ctah_branch_flowrate as f64,
             &now, 
             &now);
 
         let now = DateTime::now();
-        let _ = address_space.set_variable_value(
+        let _ = address_space_lock.set_variable_value(
             heater_branch_mass_flowrate_node.clone(), 
             heater_branch_flowrate as f64,
             &now, 
             &now);
 
         let now = DateTime::now();
-        let _ = address_space.set_variable_value(
+        let _ = address_space_lock.set_variable_value(
             dhx_branch_mass_flowrate_node.clone(), 
             dhx_branch_flowrate as f64,
             &now, 
@@ -393,7 +398,7 @@ pub fn construct_and_run_ciet_server(run_server: bool){
 
 
         let now = DateTime::now();
-        let _ = address_space.set_variable_value(
+        let _ = address_space_lock.set_variable_value(
             loop_pressure_drop_error_due_to_coriolis_flowmeter_pascals_node.clone(), 
             two_percent_flowrate_error_ctah_heater_only_flow.value as f64,
             &now, 
@@ -404,7 +409,7 @@ pub fn construct_and_run_ciet_server(run_server: bool){
             get_manometer_reading_error_pascals();
 
         let now = DateTime::now();
-        let _ = address_space.set_variable_value(
+        let _ = address_space_lock.set_variable_value(
             manometer_reading_error_pascals_node.clone(), 
             manometer_reading_error_pascals.value as f64,
             &now, 
@@ -448,7 +453,7 @@ pub fn construct_and_run_ciet_server(run_server: bool){
             fldk_error_pascals_squared.sqrt();
 
         let now = DateTime::now();
-        let _ = address_space.set_variable_value(
+        let _ = address_space_lock.set_variable_value(
             loop_pressure_drop_error_due_to_fldk_pascals_node.clone(), 
             fldk_error_pascals.value as f64,
             &now, 
@@ -468,7 +473,7 @@ pub fn construct_and_run_ciet_server(run_server: bool){
 
 
         let now = DateTime::now();
-        let _ = address_space.set_variable_value(
+        let _ = address_space_lock.set_variable_value(
             loop_pressure_drop_error_total_node.clone(), 
             total_pressure_error_estimate.value as f64,
             &now, 
@@ -493,9 +498,230 @@ pub fn construct_and_run_ciet_server(run_server: bool){
     //
     // the second polling action is the ciet heater code
 
+    // first, initial conditions and timestep
     let timestep = Time::new::<uom::si::time::millisecond>(15.0);
+    let initial_temperature: ThermodynamicTemperature = 
+    ThermodynamicTemperature::new::<degree_celsius>(79.12);
+    let inlet_temperature = initial_temperature;
+    let ambient_air_temp: ThermodynamicTemperature = 
+    ThermodynamicTemperature::new::<degree_celsius>(21.67);
 
+    // next, heater nodalisation
+    let number_of_inner_temperature_nodes: usize = 6;
+
+
+    let mut heater_v2_bare = HeaterVersion2Bare::new_dewet_model(
+        initial_temperature,
+        ambient_air_temp,
+        number_of_inner_temperature_nodes
+    );
+    let mut heater_top_head_bare: HeaterTopBottomHead 
+    = HeaterTopBottomHead::new_top_head(
+        initial_temperature,
+        ambient_air_temp);
+
+    let mut heater_bottom_head_bare: HeaterTopBottomHead 
+    = HeaterTopBottomHead::new_bottom_head(
+        initial_temperature,
+        ambient_air_temp);
+
+    // static mixers
+    let mut static_mixer_mx_10_object: StaticMixerMX10 
+    = StaticMixerMX10::new_static_mixer(
+        initial_temperature,
+        ambient_air_temp);
+
+    let mut static_mixer_mx_10_pipe: StaticMixerMX10 
+    = StaticMixerMX10::new_static_mixer_pipe(
+        initial_temperature,
+        ambient_air_temp);
+
+    // structural support
+    let struct_support_equiv_diameter: Length = Length::new::<inch>(0.5);
+    let struc_support_equiv_length: Length = Length::new::<uom::si::length::foot>(1.0);
+
+
+    let mut structural_support_heater_top_head = 
+    StructuralSupport::new_steel_support_cylinder(
+        struc_support_equiv_length,
+        struct_support_equiv_diameter,
+        initial_temperature,
+        ambient_air_temp);
+
+    let mut structural_support_heater_bottom_head = 
+    structural_support_heater_top_head.clone();
+
+    let mut structural_support_mx_10 = 
+    structural_support_heater_top_head.clone();
+
+    let mut inlet_bc: HeatTransferEntity = BCType::new_const_temperature( 
+        inlet_temperature).into();
+
+    let mut outlet_bc: HeatTransferEntity = BCType::new_adiabatic_bc().into();
+
+    let approx_support_conductance: ThermalConductance = 
+    structural_support_heater_top_head.get_axial_node_to_bc_conductance();
+
+
+    let support_conductance_interaction = HeatTransferInteractionType::
+        UserSpecifiedThermalConductance(approx_support_conductance);
+
+    let mass_flowrate = MassRate::new::<kilogram_per_second>(0.18);
+    // main loop for ciet heater
+
+    let loop_time = SystemTime::now();
     let ciet_heater_loop = move || {
+        // timer start 
+        let loop_time_start = loop_time.elapsed().unwrap();
+
+        // bcs 
+
+
+        // create interactions 
+
+
+        // let's get heater temperatures for post processing
+        // as well as the interaction
+        // for simplicity, i use the boussineseq approximation,
+        // which assumes that heat transfer is governed by 
+        // average density (which doesn't change much for liquid 
+        // anyway)
+
+
+        // this is needed for heated section 
+        // bulk outlet temperature
+        let mut therminol_array_clone: FluidArray 
+        = heater_v2_bare.therminol_array.clone().try_into().unwrap();
+
+
+        let heater_fluid_bulk_temp: ThermodynamicTemperature = 
+        therminol_array_clone.try_get_bulk_temperature().unwrap();
+
+        // this is needed for heater surface temperatures
+        let heater_surface_array_clone: SolidColumn 
+        = heater_v2_bare.steel_shell.clone().try_into().unwrap();
+
+        let heater_surface_array_temp: Vec<ThermodynamicTemperature> = 
+        heater_surface_array_clone.get_temperature_vector().unwrap();
+
+        // heater top head exit temperature for comparison
+        let heater_top_head_bare_therminol_clone: FluidArray = 
+        heater_top_head_bare.therminol_array.clone().try_into().unwrap();
+
+        let heater_top_head_exit_temperature: ThermodynamicTemperature = 
+        heater_top_head_bare_therminol_clone.get_temperature_vector()
+            .unwrap().into_iter().last().unwrap();
+
+        // BT-12: static mixer outlet temperature
+
+        let static_mixer_therminol_clone: FluidArray = 
+        static_mixer_mx_10_object.therminol_array.clone().try_into().unwrap();
+
+        let static_mixer_exit_temperature: ThermodynamicTemperature
+        = static_mixer_therminol_clone.get_temperature_vector().unwrap()
+            .into_iter().last().unwrap();
+
+        let static_mixer_pipe_therminol_clone: FluidArray = 
+        static_mixer_mx_10_pipe.therminol_array.clone().try_into().unwrap();
+
+
+        // for advection interactions, because I assume boussineseq 
+        // approximations, I'll just take the average density 
+        // and use it for enthalpy transfer calculations
+        let heater_therminol_avg_density: MassDensity = 
+        LiquidMaterial::TherminolVP1.density(
+            heater_fluid_bulk_temp).unwrap();
+
+        let generic_advection_interaction = 
+        HeatTransferInteractionType::new_advection_interaction(
+            mass_flowrate,
+            heater_therminol_avg_density,
+            heater_therminol_avg_density,
+        );
+        // calculation steps, read bt11_temperature_degC and 
+        // heater power from opc-ua input
+        let heater_power: Power;
+        let heater_inlet_temp: ThermodynamicTemperature;
+        {
+            let mut address_space_lock = address_space.write();
+            let bt11_user_input_value_deg_c = address_space_lock.
+                get_variable_value(
+                    bt11_temperature_node.clone())
+                .unwrap().value.unwrap()
+                .as_f64().unwrap();
+
+            heater_inlet_temp = ThermodynamicTemperature::new::
+                <degree_celsius>(bt11_user_input_value_deg_c);
+
+            let heater_user_input_value_kilowatts = address_space_lock.
+                get_variable_value(
+                    heater_power_node.clone())
+                .unwrap().value.unwrap()
+                .as_f64().unwrap();
+
+            heater_power = Power::new::<kilowatt>(
+                heater_user_input_value_kilowatts);
+        }
+
+        // postprocessing, print out temperature sensors
+        {
+            let bt_12_temperature: ThermodynamicTemperature = 
+            static_mixer_pipe_therminol_clone.get_temperature_vector().unwrap() 
+                .into_iter().last().unwrap();
+
+            // get bt_12_temperature in degrees c rounded to 1
+            // decimal place
+            let bt12_temperature_deg_c: f64 = 
+            (bt_12_temperature.get::<degree_celsius>()*10.0)
+            .round()
+            /10.0;
+
+            // set bt12 temperature node
+            let mut address_space_lock = address_space.write();
+            let now = DateTime::now();
+            let _ = address_space_lock.set_variable_value(
+                bt12_temperature_node.clone(), 
+                bt12_temperature_deg_c as f64,
+                &now, 
+                &now);
+        }
+
+        // make axial connections to BCs 
+        //
+        // note: need to speed up this part, too slow
+
+        // need to do mutex locks here...
+        
+        //heater_bottom_head_bare.therminol_array.link_to_back(
+        //    &mut inlet_bc,
+        //    generic_advection_interaction
+        //).unwrap();
+
+        //heater_v2_bare.therminol_array.link_to_back(
+        //    &mut heater_bottom_head_bare.therminol_array,
+        //    generic_advection_interaction
+        //).unwrap();
+
+        //heater_v2_bare.therminol_array.link_to_front(
+        //    &mut heater_top_head_bare.therminol_array,
+        //    generic_advection_interaction
+        //).unwrap();
+
+
+        //heater_top_head_bare.therminol_array.link_to_front(
+        //    &mut static_mixer_mx_10_object.therminol_array,
+        //    generic_advection_interaction
+        //).unwrap();
+
+        //static_mixer_mx_10_object.therminol_array.link_to_front(
+        //    &mut static_mixer_mx_10_pipe.therminol_array,
+        //    generic_advection_interaction
+        //).unwrap();
+
+        //static_mixer_mx_10_pipe.therminol_array.link_to_front(
+        //    &mut outlet_bc,
+        //    generic_advection_interaction
+        //).unwrap();
 
     };
 
