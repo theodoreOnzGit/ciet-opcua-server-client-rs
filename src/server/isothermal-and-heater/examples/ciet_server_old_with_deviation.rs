@@ -570,7 +570,7 @@ pub fn construct_and_run_ciet_server(run_server: bool){
     = Arc::new(Mutex::new(BCType::new_const_temperature( 
         inlet_temperature).into()));
 
-    let outlet_bc: Arc<Mutex<HeatTransferEntity>> = 
+    let outlet_bc_shared_ptr: Arc<Mutex<HeatTransferEntity>> = 
     Arc::new(Mutex::new(
         BCType::new_adiabatic_bc().into()));
 
@@ -710,41 +710,38 @@ pub fn construct_and_run_ciet_server(run_server: bool){
         }
 
         // make axial connections to BCs 
-        //
-        // note: need to speed up this part, too slow
-
-        // need to do mutex locks here...
         
-        //heater_bottom_head_bare.therminol_array.link_to_back(
-        //    &mut inlet_bc,
-        //    generic_advection_interaction
-        //).unwrap();
+        heater_bottom_head_bare_shared_ptr.lock().unwrap()
+            .therminol_array.link_to_back(
+            &mut inlet_bc_shared_ptr.lock().unwrap(),
+            generic_advection_interaction
+        ).unwrap();
 
-        //heater_v2_bare.therminol_array.link_to_back(
-        //    &mut heater_bottom_head_bare.therminol_array,
-        //    generic_advection_interaction
-        //).unwrap();
+        heater_v2_bare_shared_ptr.lock().unwrap().therminol_array.link_to_back(
+            &mut heater_bottom_head_bare_shared_ptr.lock().unwrap().therminol_array,
+            generic_advection_interaction
+        ).unwrap();
 
-        //heater_v2_bare.therminol_array.link_to_front(
-        //    &mut heater_top_head_bare.therminol_array,
-        //    generic_advection_interaction
-        //).unwrap();
+        heater_v2_bare_shared_ptr.lock().unwrap().therminol_array.link_to_front(
+            &mut heater_top_head_bare_shared_ptr.lock().unwrap().therminol_array,
+            generic_advection_interaction
+        ).unwrap();
 
 
-        //heater_top_head_bare.therminol_array.link_to_front(
-        //    &mut static_mixer_mx_10_object.therminol_array,
-        //    generic_advection_interaction
-        //).unwrap();
+        heater_top_head_bare_shared_ptr.lock().unwrap().therminol_array.link_to_front(
+            &mut static_mixer_mx_10_object_shared_ptr.lock().unwrap().therminol_array,
+            generic_advection_interaction
+        ).unwrap();
 
-        //static_mixer_mx_10_object.therminol_array.link_to_front(
-        //    &mut static_mixer_mx_10_pipe.therminol_array,
-        //    generic_advection_interaction
-        //).unwrap();
+        static_mixer_mx_10_object_shared_ptr.lock().unwrap().therminol_array.link_to_front(
+            &mut static_mixer_mx_10_pipe_shared_ptr.lock().unwrap().therminol_array,
+            generic_advection_interaction
+        ).unwrap();
 
-        //static_mixer_mx_10_pipe.therminol_array.link_to_front(
-        //    &mut outlet_bc,
-        //    generic_advection_interaction
-        //).unwrap();
+        static_mixer_mx_10_pipe_shared_ptr.lock().unwrap().therminol_array.link_to_front(
+            &mut outlet_bc_shared_ptr.lock().unwrap(),
+            generic_advection_interaction
+        ).unwrap();
 
     };
 
