@@ -743,6 +743,31 @@ pub fn construct_and_run_ciet_server(run_server: bool){
             generic_advection_interaction
         ).unwrap();
 
+        // lateral connections without thread spawning 
+
+        heater_v2_bare_shared_ptr.lock().unwrap().
+            lateral_and_miscellaneous_connections(
+                mass_flowrate,
+                heater_power);
+
+        heater_bottom_head_bare_shared_ptr.lock().unwrap(). 
+            lateral_and_miscellaneous_connections(
+                mass_flowrate);
+
+        heater_top_head_bare_shared_ptr.lock().unwrap()
+            .lateral_and_miscellaneous_connections(
+                mass_flowrate);
+
+
+        static_mixer_mx_10_object_shared_ptr.lock().unwrap().
+            lateral_and_miscellaneous_connections(
+                mass_flowrate);
+
+        static_mixer_mx_10_pipe_shared_ptr.lock().unwrap().
+            lateral_and_miscellaneous_connections(
+            mass_flowrate);
+
+
     };
 
     
