@@ -70,8 +70,9 @@ Emil Ernerfeldt's eframe template:
 
 
 
-They are released under Apache 2.0 and MIT (uom and peroxide)
-and roots is released under BSD 2 clause. The licensing notices
+They are usually released under Apache 2.0 and MIT (uom and peroxide)
+and roots/OpenBLAS 
+is released under BSD 2 clause. The licensing notices
 is provided in the licensing file.
 
 This app is released uses a thermal hydraulics
