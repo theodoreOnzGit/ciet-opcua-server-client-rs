@@ -272,17 +272,17 @@ impl GuiClient {
         // it will be arranged [time, bt11, heater_power, bt12]
         let time_heater_power_vec: Vec<[f64;2]> = opcua_plot_pts.iter().map(
             |tuple|{
-                let [time,_,heater_power_kW,_] = *tuple;
+                let [time,_,heater_power_kw,_] = *tuple;
 
-                [time, heater_power_kW]
+                [time, heater_power_kw]
             }
         ).collect();
 
         let max_time = time_vec.clone().into_iter().fold(f64::NEG_INFINITY, f64::max);
         let max_user_input = bt11_temp_input_vec.clone().into_iter().fold(f64::NEG_INFINITY, f64::max);
-        let current_user_input = bt11_temp_input_vec.clone().into_iter().last();
 
-        let current_user_input = match current_user_input {
+        let current_bt11 = bt11_temp_input_vec.clone().into_iter().last();
+        let _current_bt11 = match current_bt11 {
             Some(float) => float,
             None => 0.0,
         };
@@ -323,6 +323,11 @@ impl GuiClient {
 
         }
 
+        let current_bt12 = bt12_temp_output_vec.clone().into_iter().last();
+        let _current_bt12 = match current_bt12 {
+            Some(float) => float,
+            None => 0.0,
+        };
 
 
         bt11_bt12_temp_plot.show(ui, |plot_ui| {
@@ -527,7 +532,7 @@ pub fn try_connect_to_server_and_run_client(endpoint: &str,
                 let user_input_heater_power_kilowatts: f32 = 
                 heater_power_kilowatts_input_ptr.lock().unwrap().to_owned();
 
-                dbg!(&user_input_heater_power_kilowatts);
+                //dbg!(&user_input_heater_power_kilowatts);
 
 
                 // next, create the write values
