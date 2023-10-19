@@ -5,12 +5,12 @@ edition = "2021"
 
 [[bin]]
 name = "client"
-path = "src/client/bin/main.rs"
+path = "src/client/isothermal-and-heater/main.rs"
 
 
 [[bin]]
 name = "server"
-path = "src/server/bin/main.rs"
+path = "src/server/isothermal-and-heater/main.rs"
 
 [dependencies]
 local-ip-address = "0.5.6"
