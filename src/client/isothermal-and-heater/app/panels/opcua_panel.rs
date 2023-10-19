@@ -10,7 +10,7 @@ use std::sync::{Arc, Mutex};
 
 impl GuiClient {
     
-    pub fn opcua_panel_ui(&mut self, ui: &mut Ui) {
+    pub fn ciet_isothermal_panel_ui(&mut self, ui: &mut Ui) {
 
         ui.separator();
         ui.horizontal(|ui| {
@@ -177,6 +177,176 @@ impl GuiClient {
             )).name("mass flowrate kg/s"));
         });
     }
+
+
+    pub fn ciet_heater_bare_panel_ui(&mut self, ui: &mut Ui) {
+
+        ui.separator();
+        ui.horizontal(|ui| {
+            ui.label("IP Address for Server (IPv4): ");
+            ui.text_edit_singleline(
+                self.opcua_server_ip_addr.lock().unwrap().deref_mut());
+        });
+        ui.separator();
+        ui.add(egui::Spinner::new());
+        // slider changes the user input value
+        // and we release the mutex lock immediately
+        {
+            let mut binding = self.opcua_input.lock().unwrap();
+            let user_input_value = binding.deref_mut();
+            ui.add(egui::Slider::new(user_input_value, -20000.0..=20000.0).
+                text("user loop pressure drop input (Pa)"));
+
+        }
+
+
+        let mut opcua_plot = Plot::new("loop pressure drop plot").legend(Legend::default());
+
+        // sets the aspect for plot 
+        opcua_plot = opcua_plot.width(500.0);
+        opcua_plot = opcua_plot.view_aspect(16.0/9.0);
+        opcua_plot = opcua_plot.data_aspect(2.5);
+        opcua_plot = opcua_plot.auto_bounds_x();
+        opcua_plot = opcua_plot.auto_bounds_y();
+
+        // let's create a line in the plot
+        let opcua_plot_pts: Vec<[f64;3]> = self.
+            opcua_plots_ptr.lock().unwrap().deref_mut()
+            .iter().map(|&values|{
+                values}
+            ).collect();
+
+        let time_vec: Vec<f64> = opcua_plot_pts.iter().map(
+            |tuple|{
+                let [time,_,_] = *tuple;
+
+                time
+            }
+        ).collect();
+
+        let opcua_user_input_vec: Vec<f64> = opcua_plot_pts.iter().map(
+            |tuple|{
+                let [_,opcua_user_input,_] = *tuple;
+
+                opcua_user_input
+            }
+        ).collect();
+
+        let opcua_user_output_vec: Vec<f64> = opcua_plot_pts.iter().map(
+            |tuple|{
+                let [_,_,opcua_user_output] = *tuple;
+
+                opcua_user_output
+            }
+        ).collect();
+
+
+        let time_input_vec: Vec<[f64;2]> = opcua_plot_pts.iter().map(
+            |tuple|{
+                let [time,opcua_user_input,_] = *tuple;
+
+                [time, opcua_user_input]
+            }
+        ).collect();
+
+        let time_output_vec: Vec<[f64;2]> = opcua_plot_pts.iter().map(
+            |tuple|{
+                let [time,_,opcua_model_output] = *tuple;
+
+                [time, opcua_model_output]
+            }
+        ).collect();
+
+        let max_time = time_vec.clone().into_iter().fold(f64::NEG_INFINITY, f64::max);
+        let max_user_input = opcua_user_input_vec.clone().into_iter().fold(f64::NEG_INFINITY, f64::max);
+        let current_user_input = opcua_user_input_vec.clone().into_iter().last();
+
+        let current_user_input = match current_user_input {
+            Some(float) => float,
+            None => 0.0,
+        };
+
+        // include max x and y values 
+        opcua_plot = opcua_plot.include_x(max_time);
+        opcua_plot = opcua_plot.include_y(max_user_input);
+
+        // axis labels 
+        opcua_plot = opcua_plot.x_axis_label(
+            "time (seconds), current time (seconds): ".to_owned() 
+            + &max_time.to_string());
+        opcua_plot = opcua_plot.y_axis_label(
+            "Pressure (Pa) ; \n  current pressure (Pa): ".to_owned()
+            + &current_user_input.to_string());
+
+        // now truncate values that are too old
+        // show only last minute 
+        let time_window_seconds = 10.0;
+        if max_time as f64 > time_window_seconds as f64 {
+            // i want to delete time older than time_window_seconds
+            let index_result = time_vec.clone().iter().position(
+                |&time| {
+                    // we check if the time is less than the oldest 
+                    // allowable time 
+                    let oldest_allowable_time = max_time - time_window_seconds;
+                    time < oldest_allowable_time
+                }
+            );
+            let _ = match index_result {
+                Some(index) => {
+                    self.opcua_plots_ptr.lock().unwrap().deref_mut().remove(index);
+                },
+                None => {
+                    // do nothing 
+                    ()
+                },
+            };
+
+        }
+
+
+
+        opcua_plot.show(ui, |plot_ui| {
+            plot_ui.line(Line::new(PlotPoints::from(
+                        time_input_vec.clone()
+            )).name("opc-ua user input (loop pressure drop [Pa])"));
+        });
+
+        // second plot for the 
+        ui.separator();
+        let mut opcua_mass_flow_plot = Plot::new("mass flowrate plot").legend(Legend::default());
+
+        // sets the aspect for plot 
+        opcua_mass_flow_plot = opcua_mass_flow_plot.width(500.0);
+        opcua_mass_flow_plot = opcua_mass_flow_plot.view_aspect(16.0/9.0);
+        opcua_mass_flow_plot = opcua_mass_flow_plot.data_aspect(2.5);
+        opcua_mass_flow_plot = opcua_mass_flow_plot.auto_bounds_x();
+        opcua_mass_flow_plot = opcua_mass_flow_plot.auto_bounds_y();
+        opcua_mass_flow_plot = opcua_mass_flow_plot.x_axis_label(
+            "time (seconds)");
+        let current_user_output = opcua_user_output_vec.clone().into_iter().last();
+
+        let mut current_user_output = match current_user_output {
+            Some(float) => float,
+            None => 0.0,
+        };
+
+        // 4dp rounding
+        current_user_output = 
+            (current_user_output * 10000.0).round()/10000.0;
+
+
+        opcua_mass_flow_plot = opcua_mass_flow_plot.y_axis_label(
+            "mass flowrate (kg/s) \n 
+            current mass flowrate: ".to_owned() +
+            &current_user_output.to_string());
+
+        opcua_mass_flow_plot.show(ui, |plot_ui| {
+            plot_ui.line(Line::new(PlotPoints::from(
+                        time_output_vec
+            )).name("mass flowrate kg/s"));
+        });
+    }
+
 }
 
 

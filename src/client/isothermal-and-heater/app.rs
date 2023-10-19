@@ -44,8 +44,8 @@ pub struct GuiClient {
 enum Panel {
     Simple,
     InputOutput,
-    OpcuaDemo,
-
+    IsothermalCIET,
+    HeaterV2BareCIET,
 }
 
 impl Default for GuiClient {
@@ -57,7 +57,7 @@ impl Default for GuiClient {
             plot_points_ptr: Arc::new(
                 Mutex::new(vec![])
             ),
-            open_panel: Panel::OpcuaDemo,
+            open_panel: Panel::IsothermalCIET,
             user_input: Arc::new(Mutex::new(0.0)),
             model_output: Arc::new(Mutex::new(0.0)),
             input_output_plots_ptr: Arc::new(
@@ -144,9 +144,11 @@ impl eframe::App for GuiClient {
             ui.separator();
             ui.horizontal( 
                 |ui| {
-                    ui.selectable_value(&mut self.open_panel, Panel::Simple, "user input in realtime"); 
-                    ui.selectable_value(&mut self.open_panel, Panel::InputOutput, "user given input and output"); 
-                    ui.selectable_value(&mut self.open_panel, Panel::OpcuaDemo, "Opcua Client Demo"); 
+                    ui.selectable_value(&mut self.open_panel, Panel::Simple, "Simple User Input"); 
+                    ui.selectable_value(&mut self.open_panel, Panel::InputOutput, "Transfer Fn Simulation"); 
+                    ui.selectable_value(&mut self.open_panel, Panel::IsothermalCIET, "CIET Isothermal Simulation"); 
+                    ui.selectable_value(&mut self.open_panel, Panel::HeaterV2BareCIET, 
+                        "CIET Heater v2 Bare Simulation"); 
             }
             );
             ui.separator();
@@ -160,8 +162,11 @@ impl eframe::App for GuiClient {
                 Panel::InputOutput => {
                     self.user_input_output_panel_ui(ui);
                 },
-                Panel::OpcuaDemo => {
-                    self.opcua_panel_ui(ui);
+                Panel::IsothermalCIET => {
+                    self.ciet_isothermal_panel_ui(ui);
+                }
+                Panel::HeaterV2BareCIET => {
+                    self.ciet_heater_bare_panel_ui(ui);
                 }
             }
             
