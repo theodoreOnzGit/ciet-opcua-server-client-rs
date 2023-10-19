@@ -7,7 +7,7 @@ use opcua::server::config;
 use thermal_hydraulics_rs::prelude::alpha_nightly::*;
 
 use super::ciet_functions_for_deviation_calcs::*;
-use std::time::Instant;
+use std::{time::{Instant, self}, thread};
 //use opcua::server::address_space;
 
 /// In this example, we use the legacy ciet server codes used in maturin
@@ -478,8 +478,6 @@ pub fn construct_and_run_ciet_server(run_server: bool){
         // i think we are done!
 
 
-
-
     };
 
     server.add_polling_action(500, calculate_flowrate_and_pressure_loss);
@@ -492,6 +490,20 @@ pub fn construct_and_run_ciet_server(run_server: bool){
     // if it adds to the polling time, it will print as often as
     // the endpoint prints (every 5s)
     // otherwise it will print twice as often
+    //
+    // the second polling action is the ciet heater code
+
+    let timestep = Time::new::<uom::si::time::millisecond>(15.0);
+
+    let ciet_heater_loop = move || {
+
+    };
+
+    
+    server.add_polling_action(
+        timestep.get::<uom::si::time::millisecond>().round() as u64, 
+        ciet_heater_loop);
+
 
     if run_server { server.run(); }
 
