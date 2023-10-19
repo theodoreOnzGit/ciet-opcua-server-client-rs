@@ -1,5 +1,6 @@
 pub mod app;
 use std::ops::Deref;
+use local_ip_address::local_ip;
 
 pub use app::*;
 fn main() -> eframe::Result<()> {
@@ -98,8 +99,8 @@ fn main() -> eframe::Result<()> {
         // this is a simple connection loop, but doesn't reconnect 
         // if there is a disconnection
 
-        let ip_addr: String = opcua_ip_addr_ptr_clone.lock().unwrap().deref_mut()
-            .to_string();
+        let my_local_ip = local_ip().unwrap();
+        let ip_addr: String = my_local_ip.to_string();        
         let endpoint: String = "opc.tcp://".to_owned()
         +&ip_addr+":4840/rust_ciet_opcua_server";
 

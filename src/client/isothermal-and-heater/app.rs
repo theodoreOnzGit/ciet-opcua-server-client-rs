@@ -63,6 +63,10 @@ enum Panel {
 
 impl Default for GuiClient {
     fn default() -> Self {
+
+        let my_local_ip = local_ip_address::local_ip().unwrap();
+        let ip_addr: String = my_local_ip.to_string();        
+
         Self {
             // Example stuff:
             label: "Roentgen".to_owned(),
@@ -82,7 +86,7 @@ impl Default for GuiClient {
                 Mutex::new(vec![])
             ),
             opcua_server_ip_addr: Arc::new(Mutex::new(
-                "127.0.0.1".to_string())),
+                ip_addr)),
             bt11_temp_deg_c: Arc::new(Mutex::new(79.12)),
             bt12_temp_deg_c: Arc::new(Mutex::new(79.12)),
             heater_power_kilowatts: Arc::new(Mutex::new(8.5)),
