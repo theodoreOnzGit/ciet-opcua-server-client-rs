@@ -12,7 +12,9 @@ path = "src/client/bin/main.rs"
 name = "server"
 path = "src/server/bin/main.rs"
 
+[dependencies]
+thermal_hydraulics_rs = "0.0.9"
+
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[dependencies]
