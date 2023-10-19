@@ -271,27 +271,31 @@ pub fn example_heater(){
             // anyway)
 
 
+            // this is needed for heated section 
+            // bulk outlet temperature
             let mut therminol_array_clone: FluidArray 
             = heater_v2_bare.therminol_array.clone().try_into().unwrap();
 
-            let _therminol_array_temperature: Vec<ThermodynamicTemperature> = 
-            therminol_array_clone.get_temperature_vector().unwrap();
 
+            let heater_fluid_bulk_temp: ThermodynamicTemperature = 
+            therminol_array_clone.try_get_bulk_temperature().unwrap();
+
+            // this is needed for heater surface temperatures
             let heater_surface_array_clone: SolidColumn 
             = heater_v2_bare.steel_shell.clone().try_into().unwrap();
 
             let heater_surface_array_temp: Vec<ThermodynamicTemperature> = 
             heater_surface_array_clone.get_temperature_vector().unwrap();
 
-            let heater_fluid_bulk_temp: ThermodynamicTemperature = 
-            therminol_array_clone.try_get_bulk_temperature().unwrap();
-
+            // heater top head exit temperature for comparison
             let heater_top_head_bare_therminol_clone: FluidArray = 
             heater_top_head_bare.therminol_array.clone().try_into().unwrap();
 
             let heater_top_head_exit_temperature: ThermodynamicTemperature = 
             heater_top_head_bare_therminol_clone.get_temperature_vector()
                 .unwrap().into_iter().last().unwrap();
+
+            // BT-12: static mixer outlet temperature
 
             let static_mixer_therminol_clone: FluidArray = 
             static_mixer_mx_10_object.therminol_array.clone().try_into().unwrap();
@@ -304,6 +308,9 @@ pub fn example_heater(){
             static_mixer_mx_10_pipe.therminol_array.clone().try_into().unwrap();
 
 
+            // for advection interactions, because I assume boussineseq 
+            // approximations, I'll just take the average density 
+            // and use it for enthalpy transfer calculations
             let heater_therminol_avg_density: MassDensity = 
             LiquidMaterial::TherminolVP1.density(
                 heater_fluid_bulk_temp).unwrap();
@@ -314,6 +321,7 @@ pub fn example_heater(){
                 heater_therminol_avg_density,
                 heater_therminol_avg_density,
             );
+            // postprocessing, print out temperature
             {
                 // prints therminol temperature 
                 let heater_surf_temp_degc: Vec<f64> = heater_surface_array_temp

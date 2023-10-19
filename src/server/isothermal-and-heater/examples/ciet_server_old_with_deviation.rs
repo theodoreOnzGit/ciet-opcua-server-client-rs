@@ -34,6 +34,22 @@ pub fn construct_and_run_ciet_server(run_server: bool){
     let dhx_branch_mass_flowrate_node = NodeId::new(ns, "dhx_branch_flowrate");
     let ctah_pump_pressure_node = NodeId::new(ns, "ctah_pump_pressure");
 
+    // now for the CIET Heater, I'll a few more nodes. I need 
+    // at least the BT-11 temperature (heater inlet),
+    // BT-12 temperature (heater outlet),
+    // and heater power, 
+    //
+    // I will not be recording surface temperatures for now
+    // nor am I using the csv writer just yet
+    // The user should be able to adjust bt11_temperature and 
+    // heater power, 
+    // and consequently, observe bt12_temperature
+    let bt11_temperature = NodeId::new(ns, "bt11_temperature_degC");
+    let bt12_temperature = NodeId::new(ns, "bt12_temperature_degC");
+    let heater_power = NodeId::new(ns, "heater_power_kilowatts");
+
+
+
     // I'll have another two here to close off the Heater and DHX branch respectively
 
     let heater_branch_valve_node = NodeId::new(ns, "heater_branch_valve_open");
@@ -94,6 +110,10 @@ pub fn construct_and_run_ciet_server(run_server: bool){
                 Variable::new(&total_calc_time_node, 
                               "construction_time_plus_calc_time_ms", 
                               "construction_time_plus_calc_time_ms", 0 as f64),
+                Variable::new(&bt12_temperature, 
+                "bt12_temperature_degC_heater_outlet", 
+                "bt12_temperature_degC_heater_outlet", 
+                79.12 as f64),
             ],
             &sample_folder_id,
         );
@@ -165,6 +185,24 @@ pub fn construct_and_run_ciet_server(run_server: bool){
                              "ctah_branch_valve_open", "ctah_branch_valve_open")
             .data_type(DataTypeId::Boolean)
             .value(true as bool)
+            .writable()
+            .organized_by(&folder_id)
+            .insert(&mut address_space);
+
+        VariableBuilder::new(&bt11_temperature, 
+            "bt11_temperature_degC_heater_inlet", 
+            "bt11_temperature_degC_heater_inlet")
+            .data_type(DataTypeId::Float)
+            .value(79.12 as f64)
+            .writable()
+            .organized_by(&folder_id)
+            .insert(&mut address_space);
+
+        VariableBuilder::new(&heater_power, 
+            "heater_power_kilowatts", 
+            "heater_power_kilowatts")
+            .data_type(DataTypeId::Float)
+            .value(8.0 as f64)
             .writable()
             .organized_by(&folder_id)
             .insert(&mut address_space);
