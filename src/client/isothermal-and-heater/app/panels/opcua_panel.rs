@@ -192,74 +192,87 @@ impl GuiClient {
         // slider changes the user input value
         // and we release the mutex lock immediately
         {
-            let mut binding = self.loop_pressure_drop_pump_pressure_pascals_input.lock().unwrap();
+            let mut binding = self.heater_power_kilowatts.lock().unwrap();
             let user_input_value = binding.deref_mut();
-            ui.add(egui::Slider::new(user_input_value, -20000.0..=20000.0).
-                text("user loop pressure drop input (Pa)"));
+            ui.add(egui::Slider::new(user_input_value, 0.0..=10.0).
+                text("user heater power input (kW)"));
 
         }
 
 
-        let mut opcua_plot = Plot::new("loop pressure drop plot").legend(Legend::default());
+        let mut bt11_bt12_temp_plot = Plot::new("heater inlet and outlet temp degC").legend(Legend::default());
 
         // sets the aspect for plot 
-        opcua_plot = opcua_plot.width(500.0);
-        opcua_plot = opcua_plot.view_aspect(16.0/9.0);
-        opcua_plot = opcua_plot.data_aspect(2.5);
-        opcua_plot = opcua_plot.auto_bounds_x();
-        opcua_plot = opcua_plot.auto_bounds_y();
+        bt11_bt12_temp_plot = bt11_bt12_temp_plot.width(500.0);
+        bt11_bt12_temp_plot = bt11_bt12_temp_plot.view_aspect(16.0/9.0);
+        bt11_bt12_temp_plot = bt11_bt12_temp_plot.data_aspect(2.5);
+        bt11_bt12_temp_plot = bt11_bt12_temp_plot.auto_bounds_x();
+        bt11_bt12_temp_plot = bt11_bt12_temp_plot.auto_bounds_y();
 
         // let's create a line in the plot
-        let opcua_plot_pts: Vec<[f64;3]> = self.
-            isothermal_ciet_plots_ptr.lock().unwrap().deref_mut()
+        let opcua_plot_pts: Vec<[f64;4]> = self.
+            heater_v2_bare_ciet_plots_ptr.lock().unwrap().deref_mut()
             .iter().map(|&values|{
                 values}
             ).collect();
 
         let time_vec: Vec<f64> = opcua_plot_pts.iter().map(
             |tuple|{
-                let [time,_,_] = *tuple;
+                let [time,_,_,_] = *tuple;
 
                 time
             }
         ).collect();
 
-        let opcua_user_input_vec: Vec<f64> = opcua_plot_pts.iter().map(
+        // it will be arranged [time, bt11, heater_power, bt12]
+        let bt11_temp_input_vec: Vec<f64> = opcua_plot_pts.iter().map(
             |tuple|{
-                let [_,opcua_user_input,_] = *tuple;
+                let [_,bt11_temp,_,_] = *tuple;
 
-                opcua_user_input
+                bt11_temp
             }
         ).collect();
 
-        let opcua_user_output_vec: Vec<f64> = opcua_plot_pts.iter().map(
+        // it will be arranged [time, bt11, heater_power, bt12]
+        let bt12_temp_output_vec: Vec<f64> = opcua_plot_pts.iter().map(
             |tuple|{
-                let [_,_,opcua_user_output] = *tuple;
+                let [_,_,_,heater_outlet_temp] = *tuple;
 
-                opcua_user_output
+                heater_outlet_temp
             }
         ).collect();
 
 
-        let time_input_vec: Vec<[f64;2]> = opcua_plot_pts.iter().map(
+        // it will be arranged [time, bt11, heater_power, bt12]
+        let time_bt11_vec: Vec<[f64;2]> = opcua_plot_pts.iter().map(
             |tuple|{
-                let [time,opcua_user_input,_] = *tuple;
+                let [time,bt11_temp,_,_] = *tuple;
 
-                [time, opcua_user_input]
+                [time, bt11_temp]
             }
         ).collect();
 
-        let time_output_vec: Vec<[f64;2]> = opcua_plot_pts.iter().map(
+        // it will be arranged [time, bt11, heater_power, bt12]
+        let time_bt12_vec: Vec<[f64;2]> = opcua_plot_pts.iter().map(
             |tuple|{
-                let [time,_,opcua_model_output] = *tuple;
+                let [time,_,_,bt12_temp] = *tuple;
 
-                [time, opcua_model_output]
+                [time, bt12_temp]
+            }
+        ).collect();
+
+        // it will be arranged [time, bt11, heater_power, bt12]
+        let time_heater_power_vec: Vec<[f64;2]> = opcua_plot_pts.iter().map(
+            |tuple|{
+                let [time,_,heater_power_kW,_] = *tuple;
+
+                [time, heater_power_kW]
             }
         ).collect();
 
         let max_time = time_vec.clone().into_iter().fold(f64::NEG_INFINITY, f64::max);
-        let max_user_input = opcua_user_input_vec.clone().into_iter().fold(f64::NEG_INFINITY, f64::max);
-        let current_user_input = opcua_user_input_vec.clone().into_iter().last();
+        let max_user_input = bt11_temp_input_vec.clone().into_iter().fold(f64::NEG_INFINITY, f64::max);
+        let current_user_input = bt11_temp_input_vec.clone().into_iter().last();
 
         let current_user_input = match current_user_input {
             Some(float) => float,
@@ -267,16 +280,15 @@ impl GuiClient {
         };
 
         // include max x and y values 
-        opcua_plot = opcua_plot.include_x(max_time);
-        opcua_plot = opcua_plot.include_y(max_user_input);
+        bt11_bt12_temp_plot = bt11_bt12_temp_plot.include_x(max_time);
+        bt11_bt12_temp_plot = bt11_bt12_temp_plot.include_y(max_user_input);
 
         // axis labels 
-        opcua_plot = opcua_plot.x_axis_label(
+        bt11_bt12_temp_plot = bt11_bt12_temp_plot.x_axis_label(
             "time (seconds), current time (seconds): ".to_owned() 
             + &max_time.to_string());
-        opcua_plot = opcua_plot.y_axis_label(
-            "Pressure (Pa) ; \n  current pressure (Pa): ".to_owned()
-            + &current_user_input.to_string());
+        bt11_bt12_temp_plot = bt11_bt12_temp_plot.y_axis_label(
+            "temperature degree_celsius".to_owned());
 
         // now truncate values that are too old
         // show only last minute 
@@ -293,7 +305,7 @@ impl GuiClient {
             );
             let _ = match index_result {
                 Some(index) => {
-                    self.isothermal_ciet_plots_ptr.lock().unwrap().deref_mut().remove(index);
+                    self.heater_v2_bare_ciet_plots_ptr.lock().unwrap().deref_mut().remove(index);
                 },
                 None => {
                     // do nothing 
@@ -305,45 +317,48 @@ impl GuiClient {
 
 
 
-        opcua_plot.show(ui, |plot_ui| {
+        bt11_bt12_temp_plot.show(ui, |plot_ui| {
             plot_ui.line(Line::new(PlotPoints::from(
-                        time_input_vec.clone()
-            )).name("opc-ua user input (loop pressure drop [Pa])"));
+                        time_bt11_vec.clone()
+            )).name("bt11 (heater inlet) temperature deg C"));
+            plot_ui.line(Line::new(PlotPoints::from(
+                        time_bt12_vec.clone()
+            )).name("bt12 (heater outlet) temperature deg C"));
         });
 
         // second plot for the 
         ui.separator();
-        let mut opcua_mass_flow_plot = Plot::new("mass flowrate plot").legend(Legend::default());
+        let mut power_plot = Plot::new("mass flowrate plot").legend(Legend::default());
 
         // sets the aspect for plot 
-        opcua_mass_flow_plot = opcua_mass_flow_plot.width(500.0);
-        opcua_mass_flow_plot = opcua_mass_flow_plot.view_aspect(16.0/9.0);
-        opcua_mass_flow_plot = opcua_mass_flow_plot.data_aspect(2.5);
-        opcua_mass_flow_plot = opcua_mass_flow_plot.auto_bounds_x();
-        opcua_mass_flow_plot = opcua_mass_flow_plot.auto_bounds_y();
-        opcua_mass_flow_plot = opcua_mass_flow_plot.x_axis_label(
+        power_plot = power_plot.width(500.0);
+        power_plot = power_plot.view_aspect(16.0/9.0);
+        power_plot = power_plot.data_aspect(2.5);
+        power_plot = power_plot.auto_bounds_x();
+        power_plot = power_plot.auto_bounds_y();
+        power_plot = power_plot.x_axis_label(
             "time (seconds)");
-        let current_user_output = opcua_user_output_vec.clone().into_iter().last();
+        let current_user_output = bt12_temp_output_vec.clone().into_iter().last();
 
-        let mut current_user_output = match current_user_output {
+        let mut heater_power_kilowatt = match current_user_output {
             Some(float) => float,
             None => 0.0,
         };
 
         // 4dp rounding
-        current_user_output = 
-            (current_user_output * 10000.0).round()/10000.0;
+        heater_power_kilowatt = 
+            (heater_power_kilowatt * 10000.0).round()/10000.0;
 
 
-        opcua_mass_flow_plot = opcua_mass_flow_plot.y_axis_label(
-            "mass flowrate (kg/s) \n 
-            current mass flowrate: ".to_owned() +
-            &current_user_output.to_string());
+        power_plot = power_plot.y_axis_label(
+            "heater power (kW) \n
+            current heater power: ".to_owned() +
+            &heater_power_kilowatt.to_string());
 
-        opcua_mass_flow_plot.show(ui, |plot_ui| {
+        power_plot.show(ui, |plot_ui| {
             plot_ui.line(Line::new(PlotPoints::from(
-                        time_output_vec
-            )).name("mass flowrate kg/s"));
+                        time_heater_power_vec
+            )).name("Heater Power (kW)"));
         });
     }
 
