@@ -242,6 +242,14 @@ impl GuiClient {
             }
         ).collect();
 
+        let heater_power_input_vec: Vec<f64> = opcua_plot_pts.iter().map(
+            |tuple|{
+                let [_,_,heater_power_kw,_] = *tuple;
+
+                heater_power_kw
+            }
+        ).collect();
+
 
         // it will be arranged [time, bt11, heater_power, bt12]
         let time_bt11_vec: Vec<[f64;2]> = opcua_plot_pts.iter().map(
@@ -338,7 +346,7 @@ impl GuiClient {
         power_plot = power_plot.auto_bounds_y();
         power_plot = power_plot.x_axis_label(
             "time (seconds)");
-        let current_user_output = bt12_temp_output_vec.clone().into_iter().last();
+        let current_user_output = heater_power_input_vec.clone().into_iter().last();
 
         let mut heater_power_kilowatt = match current_user_output {
             Some(float) => float,
@@ -502,6 +510,7 @@ pub fn try_connect_to_server_and_run_client(endpoint: &str,
 
                 *heater_exit_temp_to_gui = bt12_exit_temp_deg_c;
 
+
             }
 
             // now for the writing part, we take the user input pressure 
@@ -517,6 +526,8 @@ pub fn try_connect_to_server_and_run_client(endpoint: &str,
 
                 let user_input_heater_power_kilowatts: f32 = 
                 heater_power_kilowatts_input_ptr.lock().unwrap().to_owned();
+
+                dbg!(&user_input_heater_power_kilowatts);
 
 
                 // next, create the write values
@@ -536,7 +547,7 @@ pub fn try_connect_to_server_and_run_client(endpoint: &str,
                     };
 
                 let heater_power_node_write: WriteValue = WriteValue {
-                        node_id: bt11_temperature_node.clone(),
+                        node_id: heater_power_node.clone(),
                         attribute_id: AttributeId::Value as u32,
                         index_range: UAString::null(),
                         value: Variant::Float(user_input_heater_power_kilowatts).into(),
