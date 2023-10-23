@@ -74,6 +74,15 @@ fn main() -> eframe::Result<()> {
         Time::new::<second>(1.0)
     );
 
+    let mut g_s_second_order_over_damped = SecondOrderStableTransferFn::new(
+        1.0, // process gain
+        Time::new::<second>(1.0),  // process time
+        0.55, // damping factor
+        0.0, 
+        0.0, 
+        Time::new::<second>(1.0)
+    );
+
     // this is the thread for the user input and 
     // transfer fn
     thread::spawn(move||{
@@ -99,10 +108,10 @@ fn main() -> eframe::Result<()> {
 
             let current_time = Time::new::<millisecond>(time_elapsed_ms as f64);
 
-            let model_output = g_s_second_order_crit_damped.set_user_input_and_calc_output(
+            let model_output = g_s_second_order_over_damped.set_user_input_and_calc_output(
                 current_time, user_input as f64);
 
-            dbg!(&g_s_second_order_crit_damped);
+            dbg!(&g_s_second_order_over_damped);
 
             input_output_plots_ptr_clone.lock().unwrap().deref_mut()
                 .push([time_elapsed_s,user_input as f64,

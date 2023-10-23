@@ -26,9 +26,9 @@ pub struct SecondOrderStableTransferFn {
 impl Default for SecondOrderStableTransferFn {
     /// default is: 
     ///
-    /// 1 / (s^2 + s + 1)
+    /// 1 / (s^2 + 2s + 1)
     /// where process time is 1 second
-    /// the damping factor is 0.5 which makes it a critically 
+    /// the damping factor is 1.0 which makes it a critically 
     /// damped system
     ///
     /// with initial user input of 0.0 
@@ -41,7 +41,7 @@ impl Default for SecondOrderStableTransferFn {
             offset: 0.0, 
             delay: Time::new::<second>(0.0), 
             response_vec: vec![],
-            damping_factor: 0.5,
+            damping_factor: 1.0,
         }
     }
 }
@@ -265,6 +265,9 @@ pub struct SecondOrderStableStepResponse {
 }
 
 impl Default for SecondOrderStableStepResponse {
+    /// default is a critically damped system with 
+    /// process time 1s, 
+    /// process gain 1.0 (dimensionless)
     fn default() -> Self {
         SecondOrderStableStepResponse { 
             process_gain: 1.0, 
@@ -272,7 +275,7 @@ impl Default for SecondOrderStableStepResponse {
             start_time: Time::new::<second>(0.0), 
             user_input: 1.0, 
             current_time: Time::new::<second>(0.0),
-            damping_factor: 0.5,
+            damping_factor: 1.0,
         }
     }
 }
@@ -328,7 +331,7 @@ impl SecondOrderStableStepResponse {
                 also need to implement Result enum")
         }
 
-        if damping_factor < 0.5 {
+        if damping_factor < 1.0 {
             // case 1: underdamped systems
             // (zeta * t/tau_p) > 20.0
 
@@ -338,7 +341,7 @@ impl SecondOrderStableStepResponse {
                 return true;
             }
 
-        } else if damping_factor == 0.5 {
+        } else if damping_factor == 1.0 {
 
             // case 2: critically damped system
             if time_ratio > 23.0 {
@@ -417,7 +420,7 @@ impl SecondOrderStableStepResponse {
 
         let response;
 
-        if damping_factor < 0.5 {
+        if damping_factor < 1.0 {
             // case 1: underdamped
 
             let sqrt_one_minus_zeta_sq: f64 = 
@@ -452,7 +455,7 @@ impl SecondOrderStableStepResponse {
             response =  steady_state_value * scaled_response;
 
 
-        } else if damping_factor == 0.5 {
+        } else if damping_factor == 1.0 {
             // case 2: critical damping
             //
             // a_0 K_p 
