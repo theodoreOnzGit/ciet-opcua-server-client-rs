@@ -325,6 +325,9 @@ impl SecondOrderStableStepResponse {
             return true;
         }
 
+        todo!("need to take care of underdamped, overdamped 
+            and critically damped cases");
+
         return false;
     }
 
@@ -410,6 +413,37 @@ impl SecondOrderStableStepResponse {
         } else {
             // case 3: overdamped
             
+            let sqrt_zeta_sq_minus_one: f64 = 
+                (damping_factor.powf(2.0) - 1.0).sqrt();
+
+            // first, cosh term
+            // cosh ( sqrt(zeta^2-1)/tau * t)
+
+            let omega_t_term: f64 = sqrt_zeta_sq_minus_one 
+                * time_ratio.get::<uom::si::ratio::ratio>();
+
+            let cosh_term = omega_t_term.cosh();
+
+            // next, sinh term,
+            // zeta / (1 - zeta^2) * sinh ( sqrt(zeta^2 - 1)/ tau * t)
+
+            let sinh_term = damping_factor / sqrt_zeta_sq_minus_one 
+                * omega_t_term.sinh();
+
+            // now we need 1 - exp(- zeta * t/tau) *
+            // [ cosh term + sinh term ]
+
+            let cosh_term_plus_sinh_term = cosh_term + sinh_term;
+
+            // exp(- zeta * t/tau) * [ cos term + sine term ]
+            let exponential_term: f64 = (
+                -damping_factor * time_ratio.get::<uom::si::ratio::ratio>()).exp()
+                *cosh_term_plus_sinh_term;
+
+            let scaled_response = 1.0 - exponential_term;
+
+            // a_0 * K_p *exp(- zeta * t/tau) * [ cos term + sine term ]
+            response =  steady_state_value * scaled_response;
         }
 
 
