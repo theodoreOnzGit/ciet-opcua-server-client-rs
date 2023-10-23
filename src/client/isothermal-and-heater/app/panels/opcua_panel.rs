@@ -136,11 +136,6 @@ impl GuiClient {
 
 
 
-        opcua_plot.show(ui, |plot_ui| {
-            plot_ui.line(Line::new(PlotPoints::from(
-                        time_input_vec.clone()
-            )).name("opc-ua user input (loop pressure drop [Pa])"));
-        });
 
         // second plot for the 
         ui.separator();
@@ -171,10 +166,17 @@ impl GuiClient {
             current mass flowrate: ".to_owned() +
             &current_user_output.to_string());
 
-        opcua_mass_flow_plot.show(ui, |plot_ui| {
-            plot_ui.line(Line::new(PlotPoints::from(
-                        time_output_vec
-            )).name("mass flowrate kg/s"));
+        ui.horizontal(|ui| {
+            opcua_plot.show(ui, |plot_ui| {
+                plot_ui.line(Line::new(PlotPoints::from(
+                    time_input_vec.clone()
+                )).name("opc-ua user input (loop pressure drop [Pa])"));
+            });
+            opcua_mass_flow_plot.show(ui, |plot_ui| {
+                plot_ui.line(Line::new(PlotPoints::from(
+                    time_output_vec
+                )).name("mass flowrate kg/s"));
+            });
         });
     }
 
@@ -330,14 +332,6 @@ impl GuiClient {
         };
 
 
-        bt11_bt12_temp_plot.show(ui, |plot_ui| {
-            plot_ui.line(Line::new(PlotPoints::from(
-                        time_bt11_vec.clone()
-            )).name("bt11 (heater inlet) temperature deg C"));
-            plot_ui.line(Line::new(PlotPoints::from(
-                        time_bt12_vec.clone()
-            )).name("bt12 (heater outlet) temperature deg C"));
-        });
 
         // second plot for the 
         ui.separator();
@@ -368,10 +362,21 @@ impl GuiClient {
             current heater power: ".to_owned() +
             &heater_power_kilowatt.to_string());
 
-        power_plot.show(ui, |plot_ui| {
-            plot_ui.line(Line::new(PlotPoints::from(
-                        time_heater_power_vec
-            )).name("Heater Power (kW)"));
+        ui.horizontal(|ui|{
+            bt11_bt12_temp_plot.show(ui, |plot_ui| {
+                plot_ui.line(Line::new(PlotPoints::from(
+                    time_bt11_vec.clone()
+                )).name("bt11 (heater inlet) temperature deg C"));
+                plot_ui.line(Line::new(PlotPoints::from(
+                    time_bt12_vec.clone()
+                )).name("bt12 (heater outlet) temperature deg C"));
+            });
+            power_plot.show(ui, |plot_ui| {
+                plot_ui.line(Line::new(PlotPoints::from(
+                    time_heater_power_vec
+                )).name("Heater Power (kW)"));
+            });
+
         });
     }
 
