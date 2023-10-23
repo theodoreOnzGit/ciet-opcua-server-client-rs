@@ -20,7 +20,7 @@ pub struct SecondOrderStableTransferFn {
     delay: Time,
 
     /// vector of first order responses 
-    response_vec: Vec<SecondOrderResponse>,
+    response_vec: Vec<SecondOrderStableStepResponse>,
 }
 
 impl Default for SecondOrderStableTransferFn {
@@ -116,7 +116,7 @@ impl SecondOrderStableTransferFn {
             let damping_factor = self.damping_factor;
 
             // make a new response
-            let new_response = SecondOrderResponse::new(
+            let new_response = SecondOrderStableStepResponse::new(
                 process_gain,
                 process_time,
                 damping_factor,
@@ -149,8 +149,8 @@ impl SecondOrderStableTransferFn {
 
         let summation_of_responses: f64 = self.response_vec.
             iter_mut().map(
-                |first_order_response|{
-                    first_order_response.calculate_response(current_time)}
+                |second_order_response|{
+                    second_order_response.calculate_response(current_time)}
             ).sum();
 
         let output = self.offset + summation_of_responses;
@@ -255,7 +255,7 @@ impl SecondOrderStableTransferFn {
 /// step responses for underdamped, crtically damped and 
 /// overdamped stable systems
 #[derive(Debug,PartialEq, PartialOrd, Clone, Copy)]
-pub struct SecondOrderResponse {
+pub struct SecondOrderStableStepResponse {
     process_gain: f64,
     process_time: Time,
     start_time: Time,
@@ -264,9 +264,9 @@ pub struct SecondOrderResponse {
     damping_factor: f64,
 }
 
-impl Default for SecondOrderResponse {
+impl Default for SecondOrderStableStepResponse {
     fn default() -> Self {
-        SecondOrderResponse { 
+        SecondOrderStableStepResponse { 
             process_gain: 1.0, 
             process_time: Time::new::<second>(1.0), 
             start_time: Time::new::<second>(0.0), 
@@ -278,7 +278,7 @@ impl Default for SecondOrderResponse {
 }
 
 
-impl SecondOrderResponse {
+impl SecondOrderStableStepResponse {
 
     /// constructor 
     pub fn new(
@@ -297,7 +297,7 @@ impl SecondOrderResponse {
             todo!("damping factor needs to be more than 0.0, \n 
                 also need to implement Result enum")
         }
-        SecondOrderResponse { 
+        SecondOrderStableStepResponse { 
             process_gain, 
             process_time, 
             start_time, 
@@ -329,9 +329,8 @@ impl SecondOrderResponse {
     }
 
 
-    /// calculates the response of the first order system
+    /// calculates the response of the second order system
     /// at a given time
-    /// u1(t - t1) * Kp * [1-exp(- [t-t1] / tau])
     pub fn calculate_response(&mut self, simulation_time: Time) -> f64 {
 
         // get the current time (t - t0)
@@ -348,14 +347,71 @@ impl SecondOrderResponse {
             return 0.0;
         }
 
+        // time ratio is t/tau
         let time_ratio: Ratio = time_elapsed /  self.process_time;
-        let exponent_ratio: f64 = -time_ratio.value;
+        let steady_state_value: f64 = self.steady_state_value();
 
         // otherwise, calculate as per normal
 
-        // u1(t - t1) * Kp * [1-exp(- [t-t1] / tau])
-        let response: f64 = self.steady_state_value()
-            * (1.0 - exponent_ratio.exp());
+        //// u1(t - t1) * Kp * [1-exp(- [t-t1] / tau])
+        //let response: f64 = self.steady_state_value()
+        //    * (1.0 - exponent_ratio.exp());
+        
+        // need to calculate second order response
+        // which means we need the damping factor or something
+        let damping_factor = self.damping_factor;
+
+        // no unstable or undamped responses allowed
+        if damping_factor <= 0.0 {
+            todo!("damping factor needs to be more than 0.0, \n 
+                also need to implement Result enum")
+        }
+
+        let response;
+
+        if damping_factor < 0.5 {
+            // case 1: underdamped
+
+            let sqrt_one_minus_zeta_sq: f64 = 
+                (1.0 - damping_factor.powf(2.0)).sqrt();
+            // first, cos term
+            // cos ( sqrt(1-zeta^2)/tau * t)
+
+            let omega_t_term: f64 = sqrt_one_minus_zeta_sq 
+                * time_ratio.get::<uom::si::ratio::ratio>();
+
+            let cosine_term = omega_t_term.cos();
+            
+            // next, sine term,
+            // zeta / (1 - zeta^2) * sin ( sqrt(1 - zeta^2)/ tau * t)
+
+            let sine_term = damping_factor / sqrt_one_minus_zeta_sq 
+                * omega_t_term.sin();
+            
+            // now we need 1 - exp(- zeta * t/tau) *
+            // [ cos term + sine term ]
+            
+            let cosine_and_sine_term: f64 = cosine_term + sine_term;
+
+            // exp(- zeta * t/tau) * [ cos term + sine term ]
+            let exponential_term: f64 = (
+                -damping_factor * time_ratio.get::<uom::si::ratio::ratio>()).exp()
+                *cosine_and_sine_term;
+
+            let scaled_response = 1.0 - exponential_term;
+
+            // a_0 * K_p *exp(- zeta * t/tau) * [ cos term + sine term ]
+            response =  steady_state_value * scaled_response;
+
+
+        } else if damping_factor == 0.5 {
+            // case 2: critical damping
+            
+        } else {
+            // case 3: overdamped
+            
+        }
+
 
         return response;
     }
