@@ -321,16 +321,61 @@ impl SecondOrderStableStepResponse {
 
         let time_ratio: f64 = time_elapsed.value/self.process_time.value;
 
-        if time_ratio > 23.0 {
-            return true;
+        let damping_factor = self.damping_factor;
+        // no unstable or undamped responses allowed
+        if damping_factor <= 0.0 {
+            todo!("damping factor needs to be more than 0.0, \n 
+                also need to implement Result enum")
         }
+
+        if damping_factor < 0.5 {
+            // case 1: underdamped systems
+            // (zeta * t/tau_p) > 20.0
+
+            let underdamped_time_ratio = damping_factor * time_ratio;
+
+            if underdamped_time_ratio > 20.0 {
+                return true;
+            }
+
+        } else if damping_factor == 0.5 {
+
+            // case 2: critically damped system
+            if time_ratio > 23.0 {
+                return true;
+            }
+
+        } else {
+            // case 3: overdamped system
+            let sqrt_zeta_sq_minus_one: f64 = 
+                (damping_factor.powf(2.0) - 1.0).sqrt();
+            let zeta = damping_factor;
+
+            let overdamped_time_ratio_one = 
+                (zeta - sqrt_zeta_sq_minus_one) * time_ratio;
+
+            let overdamped_time_ratio_two = 
+                (zeta + sqrt_zeta_sq_minus_one) * time_ratio;
+
+            let overdamped_mode_one_steady_state: bool = 
+                overdamped_time_ratio_one.abs() > 20.0;
+            let overdamped_mode_two_steady_state: bool = 
+                overdamped_time_ratio_two.abs() > 20.0;
+
+            if overdamped_mode_two_steady_state && 
+                overdamped_mode_one_steady_state {
+                    return true;
+            }
+
+        }
+
+        
+
 
 
         return false;
         todo!("need to take care of underdamped, overdamped 
             and critically damped cases");
-
-        aaa
     }
 
 
