@@ -9,7 +9,7 @@ fn main() -> eframe::Result<()> {
     use std::{thread, time::SystemTime, ops::DerefMut};
     use uom::si::{f64::Time, time::{millisecond, second}};
     use crate::panels::opcua_panel::try_connect_to_server_and_run_client;
-    use crate::first_order_transfer_fn::FirstOrderTransferFn;
+    use crate::first_order_transfer_fn::FirstOrderStableTransferFn;
     
     
 
@@ -43,7 +43,7 @@ fn main() -> eframe::Result<()> {
     let heater_v2_bare_ciet_plots_ptr_clone = gui_app.heater_v2_bare_ciet_plots_ptr.clone();
 
     // let's make a first order transfer fn 
-    let mut g_s = FirstOrderTransferFn::new(
+    let mut g_s = FirstOrderStableTransferFn::new(
         1.0, 
         Time::new::<second>(1.0), 
         0.0, 

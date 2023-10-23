@@ -1,7 +1,7 @@
 use uom::si::{f64::*, time::second};
 
 #[derive(Debug,PartialEq, PartialOrd, Clone)]
-pub struct FirstOrderStableTransferFn {
+pub struct SecondOrderStableTransferFn {
     process_gain: f64,
     process_time: Time,
     previous_timestep_input: f64,
@@ -14,7 +14,7 @@ pub struct FirstOrderStableTransferFn {
     response_vec: Vec<FirstOrderResponse>,
 }
 
-impl Default for FirstOrderStableTransferFn {
+impl Default for SecondOrderStableTransferFn {
     /// default is: 
     ///
     /// 1 / (s + 1)
@@ -22,7 +22,7 @@ impl Default for FirstOrderStableTransferFn {
     /// with initial user input of 0.0 
     /// and initial user value of 0.0
     fn default() -> Self {
-        FirstOrderStableTransferFn { 
+        SecondOrderStableTransferFn { 
             process_gain: 1.0, 
             process_time: Time::new::<second>(1.0), 
             previous_timestep_input: 0.0, 
@@ -33,7 +33,7 @@ impl Default for FirstOrderStableTransferFn {
     }
 }
 
-impl FirstOrderStableTransferFn {
+impl SecondOrderStableTransferFn {
 
     /// constructors 
     pub fn new(process_gain: f64,
@@ -41,7 +41,7 @@ impl FirstOrderStableTransferFn {
         initial_input: f64,
         initial_value: f64,
         delay: Time,) -> Self {
-        FirstOrderStableTransferFn { 
+        SecondOrderStableTransferFn { 
             process_gain, 
             process_time, 
             previous_timestep_input: initial_input, 
@@ -55,7 +55,7 @@ impl FirstOrderStableTransferFn {
     pub fn new_filter(process_time: Time,
         initial_input: f64,
         initial_value: f64) -> Self {
-        FirstOrderStableTransferFn { 
+        SecondOrderStableTransferFn { 
             process_gain: 1.0, 
             process_time, 
             previous_timestep_input: initial_input, 

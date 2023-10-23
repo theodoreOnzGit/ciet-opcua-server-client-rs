@@ -6,6 +6,7 @@ use crate::GuiClient;
 use egui_plot::{Legend, Line, Plot, PlotPoints};
 
 pub mod first_order_transfer_fn;
+pub mod second_order_transfer_fn;
 pub mod opcua_panel;
 
 impl GuiClient {
