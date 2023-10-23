@@ -170,7 +170,7 @@ impl eframe::App for GuiClient {
                     self.simple_panel_ui(ui);
                 },
                 Panel::InputOutput => {
-                    self.user_input_output_panel_ui(ui);
+                    self.transfer_fn_input_output_panel_ui(ui);
                 },
                 Panel::IsothermalCIET => {
                     self.ciet_isothermal_panel_ui(ui);

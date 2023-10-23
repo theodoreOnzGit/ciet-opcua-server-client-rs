@@ -105,7 +105,7 @@ impl GuiClient {
         });
     }
 
-    pub fn user_input_output_panel_ui(&mut self, ui: &mut Ui) {
+    pub fn transfer_fn_input_output_panel_ui(&mut self, ui: &mut Ui) {
 
         ui.separator();
         ui.add(egui::Spinner::new());
