@@ -302,14 +302,14 @@ impl GuiClient {
 
         // now truncate values that are too old
         // show only last minute 
-        let time_window_seconds = 10.0;
-        if max_time as f64 > time_window_seconds as f64 {
+        let bt_11_bt_12_time_window_seconds = 45.0;
+        if max_time as f64 > bt_11_bt_12_time_window_seconds as f64 {
             // i want to delete time older than time_window_seconds
             let index_result = time_vec.clone().iter().position(
                 |&time| {
                     // we check if the time is less than the oldest 
                     // allowable time 
-                    let oldest_allowable_time = max_time - time_window_seconds;
+                    let oldest_allowable_time = max_time - bt_11_bt_12_time_window_seconds;
                     time < oldest_allowable_time
                 }
             );
