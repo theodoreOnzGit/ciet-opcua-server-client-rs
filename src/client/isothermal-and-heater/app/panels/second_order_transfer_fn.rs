@@ -374,8 +374,6 @@ impl SecondOrderStableStepResponse {
 
 
         return false;
-        todo!("need to take care of underdamped, overdamped 
-            and critically damped cases");
     }
 
 

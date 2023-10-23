@@ -3,6 +3,8 @@ pub mod app;
 use local_ip_address::local_ip;
 
 pub use app::*;
+
+use crate::panels::second_order_transfer_fn::SecondOrderStableTransferFn;
 fn main() -> eframe::Result<()> {
 
     use core::time;
@@ -43,7 +45,8 @@ fn main() -> eframe::Result<()> {
     let heater_v2_bare_ciet_plots_ptr_clone = gui_app.heater_v2_bare_ciet_plots_ptr.clone();
 
     // let's make a first order transfer fn 
-    let mut g_s = FirstOrderStableTransferFn::new(
+    // G(s)
+    let mut _g_s_first_order = FirstOrderStableTransferFn::new(
         1.0, 
         Time::new::<second>(1.0), 
         0.0, 
@@ -51,8 +54,19 @@ fn main() -> eframe::Result<()> {
         Time::new::<second>(4.0)
         );
 
+    // this is for testing second order transfer fn 
+    // G(s)
+    let mut g_s_second_order_underdamped = SecondOrderStableTransferFn::new(
+        1.0, // process gain
+        Time::new::<second>(1.0),  // process time
+        0.15, // damping factor
+        0.0, 
+        0.0, 
+        Time::new::<second>(1.0)
+    );
+
     // this is the thread for the user input and 
-    // first order transfer fn
+    // transfer fn
     thread::spawn(move||{
         loop {
             let time_elapsed_ms = time_now.elapsed().unwrap().as_millis();
@@ -76,10 +90,10 @@ fn main() -> eframe::Result<()> {
 
             let current_time = Time::new::<millisecond>(time_elapsed_ms as f64);
 
-            let model_output = g_s.set_user_input_and_calc_output(
+            let model_output = g_s_second_order_underdamped.set_user_input_and_calc_output(
                 current_time, user_input as f64);
 
-            //dbg!(&g_s);
+            dbg!(&g_s_second_order_underdamped);
 
             input_output_plots_ptr_clone.lock().unwrap().deref_mut()
                 .push([time_elapsed_s,user_input as f64,
