@@ -112,7 +112,7 @@ impl GuiClient {
 
         let mut binding = self.user_input.lock().unwrap();
         let user_input_value = binding.deref_mut();
-        ui.add(egui::Slider::new(user_input_value, 0.0..=0.25).
+        ui.add(egui::Slider::new(user_input_value, 0.0..=0.9).
             text("units TBD"));
 
 

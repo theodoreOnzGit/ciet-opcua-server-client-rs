@@ -59,7 +59,7 @@ fn main() -> eframe::Result<()> {
     let mut g_s_second_order_underdamped = SecondOrderStableTransferFn::new(
         1.0, // process gain
         Time::new::<second>(1.0),  // process time
-        0.45, // damping factor
+        0.5, // damping factor
         0.0, 
         0.0, 
         Time::new::<second>(1.0)
@@ -68,7 +68,7 @@ fn main() -> eframe::Result<()> {
     let mut g_s_second_order_crit_damped = SecondOrderStableTransferFn::new(
         1.0, // process gain
         Time::new::<second>(1.0),  // process time
-        0.5, // damping factor
+        1.0, // damping factor
         0.0, 
         0.0, 
         Time::new::<second>(1.0)
@@ -77,7 +77,7 @@ fn main() -> eframe::Result<()> {
     let mut g_s_second_order_over_damped = SecondOrderStableTransferFn::new(
         1.0, // process gain
         Time::new::<second>(1.0),  // process time
-        0.55, // damping factor
+        2.15, // damping factor
         0.0, 
         0.0, 
         Time::new::<second>(1.0)
