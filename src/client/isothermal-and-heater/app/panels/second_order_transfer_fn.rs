@@ -325,10 +325,12 @@ impl SecondOrderStableStepResponse {
             return true;
         }
 
+
+        return false;
         todo!("need to take care of underdamped, overdamped 
             and critically damped cases");
 
-        return false;
+        aaa
     }
 
 
@@ -409,6 +411,23 @@ impl SecondOrderStableStepResponse {
 
         } else if damping_factor == 0.5 {
             // case 2: critical damping
+            //
+            // a_0 K_p 
+            // {
+            // 1 - [1 + t/tau] exp (- t/tau)
+            // }
+
+            let one_plus_t_over_tau = 
+                1.0 + time_ratio.get::<uom::si::ratio::ratio>();
+
+            let exponential_term = (
+                -time_ratio.get::<uom::si::ratio::ratio>()).exp()
+                * one_plus_t_over_tau;
+
+            let scaled_response = 1.0 - exponential_term;
+
+            response =  steady_state_value * scaled_response;
+
             
         } else {
             // case 3: overdamped
