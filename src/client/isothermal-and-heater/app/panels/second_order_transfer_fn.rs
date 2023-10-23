@@ -20,7 +20,7 @@ pub struct SecondOrderStableTransferFn {
     delay: Time,
 
     /// vector of first order responses 
-    response_vec: Vec<FirstOrderResponse>,
+    response_vec: Vec<SecondOrderResponse>,
 }
 
 impl Default for SecondOrderStableTransferFn {
@@ -56,7 +56,8 @@ impl SecondOrderStableTransferFn {
         initial_value: f64,
         delay: Time,) -> Self {
 
-        // if damping factor is less than 0, should throw an error 
+        // if damping factor is less than or equal 
+        // 0, should throw an error 
         // or panic (i will use errors maybe later?)
 
         if damping_factor <= 0.0 {
@@ -112,11 +113,13 @@ impl SecondOrderStableTransferFn {
             let user_input = current_input - self.previous_timestep_input;
             // the time where the first order response kicks in
             let start_time = current_time + self.delay;
+            let damping_factor = self.damping_factor;
 
             // make a new response
-            let new_response = FirstOrderResponse::new(
+            let new_response = SecondOrderResponse::new(
                 process_gain,
                 process_time,
+                damping_factor,
                 start_time,
                 user_input,
                 current_time
@@ -134,7 +137,7 @@ impl SecondOrderStableTransferFn {
         }
 
         // clean up the vector first
-        self.clear_first_order_response_vector();
+        self.clear_second_order_response_vector();
 
         // need to calculate using the list of 
         // first order response vectors as per normal
@@ -157,7 +160,7 @@ impl SecondOrderStableTransferFn {
     }
 
     /// clears the item if they have reached steady state
-    fn clear_first_order_response_vector(&mut self){
+    fn clear_second_order_response_vector(&mut self){
 
         let index_of_steady_state_result = self.response_vec.iter().position(
             |first_order_response| {
@@ -247,62 +250,78 @@ impl SecondOrderStableTransferFn {
 
 
 
-/// first order response struct, 
+/// second order response struct, 
 /// will help to caluclate
-/// u1(t - t1) * Kp * [1-exp(- [t-t1] / tau])
+/// step responses for underdamped, crtically damped and 
+/// overdamped stable systems
 #[derive(Debug,PartialEq, PartialOrd, Clone, Copy)]
-pub struct FirstOrderResponse {
+pub struct SecondOrderResponse {
     process_gain: f64,
     process_time: Time,
     start_time: Time,
     user_input: f64,
     current_time: Time,
+    damping_factor: f64,
 }
 
-impl Default for FirstOrderResponse {
+impl Default for SecondOrderResponse {
     fn default() -> Self {
-        FirstOrderResponse { 
+        SecondOrderResponse { 
             process_gain: 1.0, 
             process_time: Time::new::<second>(1.0), 
             start_time: Time::new::<second>(0.0), 
             user_input: 1.0, 
             current_time: Time::new::<second>(0.0),
+            damping_factor: 0.5,
         }
     }
 }
 
 
-impl FirstOrderResponse {
+impl SecondOrderResponse {
 
     /// constructor 
     pub fn new(
         process_gain: f64,
         process_time: Time,
+        damping_factor: f64,
         start_time: Time,
         user_input: f64,
         current_time: Time,) -> Self {
-        FirstOrderResponse { 
+
+        // if damping factor is less than or equal 
+        // 0, should throw an error 
+        // or panic (i will use errors maybe later?)
+
+        if damping_factor <= 0.0 {
+            todo!("damping factor needs to be more than 0.0, \n 
+                also need to implement Result enum")
+        }
+        SecondOrderResponse { 
             process_gain, 
             process_time, 
             start_time, 
             user_input, 
             current_time,
+            damping_factor,
         }
     }
 
     /// checks if the transfer function has more or less reached 
     /// steady state,
     ///
-    /// I consider this where the time elapsed is 20 times 
+    /// I consider this where the time elapsed is 23 times 
     /// the process_time
     ///
-    /// this is because exp(-20) is about 2e-9, it is tiny...
+    /// this is because 23 * exp(-23) is about 2e-9, it is tiny...
+    /// this is because we need to consider the exponential of 
+    /// x exp(-x) for critically damped systems
     pub fn is_steady_state(&self) -> bool {
         let time_elapsed = self.current_time - self.start_time;
 
         let time_ratio: f64 = time_elapsed.value/self.process_time.value;
 
-        if time_ratio > 20.0 {
+        if time_ratio > 23.0 {
             return true;
         }
 
