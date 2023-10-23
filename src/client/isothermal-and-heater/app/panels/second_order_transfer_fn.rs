@@ -1,10 +1,19 @@
 use uom::si::{f64::*, time::second};
 
+/// second order system with transfer function 
+/// in the form 
+///
+/// K_p / ( tau^2 s^2 + 2 * tau * zeta s + 1)
+///
+/// tau is process time 
+/// zeta is damping factor 
+/// K_p is process gain (dimensionless, be careful)
 #[derive(Debug,PartialEq, PartialOrd, Clone)]
 pub struct SecondOrderStableTransferFn {
     process_gain: f64,
     process_time: Time,
     previous_timestep_input: f64,
+    damping_factor: f64,
     /// previous timestep output
     offset: f64,
     /// delay
@@ -17,7 +26,10 @@ pub struct SecondOrderStableTransferFn {
 impl Default for SecondOrderStableTransferFn {
     /// default is: 
     ///
-    /// 1 / (s + 1)
+    /// 1 / (s^2 + s + 1)
+    /// where process time is 1 second
+    /// the damping factor is 0.5 which makes it a critically 
+    /// damped system
     ///
     /// with initial user input of 0.0 
     /// and initial user value of 0.0
@@ -29,6 +41,7 @@ impl Default for SecondOrderStableTransferFn {
             offset: 0.0, 
             delay: Time::new::<second>(0.0), 
             response_vec: vec![],
+            damping_factor: 0.5,
         }
     }
 }
@@ -38,9 +51,19 @@ impl SecondOrderStableTransferFn {
     /// constructors 
     pub fn new(process_gain: f64,
         process_time: Time,
+        damping_factor: f64,
         initial_input: f64,
         initial_value: f64,
         delay: Time,) -> Self {
+
+        // if damping factor is less than 0, should throw an error 
+        // or panic (i will use errors maybe later?)
+
+        if damping_factor <= 0.0 {
+            todo!("damping factor needs to be more than 0.0, \n 
+                also need to implement Result enum")
+        }
+
         SecondOrderStableTransferFn { 
             process_gain, 
             process_time, 
@@ -48,10 +71,12 @@ impl SecondOrderStableTransferFn {
             offset: initial_value, 
             delay, 
             response_vec: vec![],
+            damping_factor,
         }
     }
 
-    /// first order filter 
+    /// second order filter 
+    /// the system will be critically damped
     pub fn new_filter(process_time: Time,
         initial_input: f64,
         initial_value: f64) -> Self {
@@ -62,6 +87,7 @@ impl SecondOrderStableTransferFn {
             offset: initial_value, 
             delay: Time::new::<second>(0.0), 
             response_vec: vec![],
+            damping_factor: 0.5,
         }
     }
 
