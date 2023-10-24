@@ -8,6 +8,7 @@ use egui_plot::{Legend, Line, Plot, PlotPoints};
 pub mod first_order_transfer_fn;
 pub mod second_order_transfer_fn;
 pub mod opcua_panel;
+pub mod decaying_sinusoid;
 
 impl GuiClient {
     pub fn simple_panel_ui(&mut self, ui: &mut Ui) {
