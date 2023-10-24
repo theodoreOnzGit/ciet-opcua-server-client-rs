@@ -94,6 +94,14 @@ fn main() -> eframe::Result<()> {
         Frequency::new::<hertz>(1.5), 
     );
 
+    let mut _g_s_decaying_cosine = DecayingSinusoid::new_cosine(
+        1.0, 
+        Frequency::new::<hertz>(0.5), 
+        0.0, 
+        0.0, 
+        Time::new::<second>(1.0),
+        Frequency::new::<hertz>(1.5), 
+    );
     // this is the thread for the user input and 
     // transfer fn
     thread::spawn(move||{
@@ -119,10 +127,17 @@ fn main() -> eframe::Result<()> {
 
             let current_time = Time::new::<millisecond>(time_elapsed_ms as f64);
 
-            let model_output = g_s_decaying_sine.set_user_input_and_calc_output(
+
+            let model_output_1 = g_s_decaying_sine.set_user_input_and_calc_output(
                 current_time, user_input as f64);
 
+            let model_output_2 = g_s_second_order_underdamped.set_user_input_and_calc_output(
+                current_time, user_input as f64);
+            
+            let model_output = model_output_1 + model_output_2;
+
             //dbg!(&g_s_second_order_underdamped);
+            //dbg!(&g_s_decaying_cosine);
 
             input_output_plots_ptr_clone.lock().unwrap().deref_mut()
                 .push([time_elapsed_s,user_input as f64,
