@@ -11,8 +11,10 @@ use uom::si::{f64::*, time::second, frequency::hertz};
 #[derive(Debug,PartialEq, PartialOrd, Clone)]
 pub struct DecayingSinusoid {
     process_gain: f64,
-    a: Time,
+    /// decay frequency or 1/decay time
+    a: Frequency,
     previous_timestep_input: f64,
+    /// oscillation frequency
     omega: Frequency,
     /// previous timestep output
     offset: f64,
@@ -39,7 +41,7 @@ impl Default for DecayingSinusoid {
     fn default() -> Self {
         DecayingSinusoid 
             { process_gain: 1.0, 
-            a: Time::new::<second>(1.0), 
+            a: Frequency::new::<hertz>(1.0), 
             previous_timestep_input: 0.0, 
             offset: 0.0, 
             delay: Time::new::<second>(0.0), 
@@ -54,7 +56,7 @@ impl DecayingSinusoid {
 
     /// constructors 
     pub fn new_sine(process_gain: f64,
-        process_time: Time,
+        decay_frequency: Frequency,
         initial_input: f64,
         initial_value: f64,
         delay: Time, omega:Frequency) -> Self {
@@ -66,7 +68,7 @@ impl DecayingSinusoid {
 
         DecayingSinusoid { 
             process_gain, 
-            a: process_time, 
+            a: decay_frequency, 
             previous_timestep_input: initial_input, 
             offset: initial_value, 
             delay, 
@@ -79,7 +81,7 @@ impl DecayingSinusoid {
 
 
     pub fn new_cosine(process_gain: f64,
-        process_time: Time,
+        decay_frequency: Frequency,
         initial_input: f64,
         initial_value: f64,
         delay: Time, omega:Frequency) -> Self {
@@ -91,7 +93,7 @@ impl DecayingSinusoid {
 
         DecayingSinusoid { 
             process_gain, 
-            a: process_time, 
+            a: decay_frequency, 
             previous_timestep_input: initial_input, 
             offset: initial_value, 
             delay, 
@@ -269,7 +271,7 @@ impl DecayingSinusoid {
 #[derive(Debug,PartialEq, PartialOrd, Clone, Copy)]
 pub struct DecaySinusoidResponse {
     process_gain: f64,
-    a: Time,
+    a: Frequency,
     start_time: Time,
     user_input: f64,
     current_time: Time,
@@ -285,7 +287,7 @@ impl Default for DecaySinusoidResponse {
     fn default() -> Self {
         DecaySinusoidResponse { 
             process_gain: 1.0, 
-            a: Time::new::<second>(1.0), 
+            a: Frequency::new::<hertz>(1.0), 
             start_time: Time::new::<second>(0.0), 
             user_input: 1.0, 
             current_time: Time::new::<second>(0.0),
@@ -301,7 +303,7 @@ impl DecaySinusoidResponse {
     /// constructor 
     pub fn new(
         process_gain: f64,
-        a: Time,
+        a: Frequency,
         start_time: Time,
         user_input: f64,
         current_time: Time,
@@ -326,16 +328,11 @@ impl DecaySinusoidResponse {
     /// checks if the transfer function has more or less reached 
     /// steady state,
     ///
-    /// I consider this where the time elapsed is 23 times 
-    /// the process_time
-    ///
-    /// this is because 23 * exp(-23) is about 2e-9, it is tiny...
-    /// this is because we need to consider the exponential of 
-    /// x exp(-x) for critically damped systems
+    /// this is determined by exp(-at) 
+    /// if at is 20 or more, then we have reached steady state
     pub fn is_steady_state(&self) -> bool {
         let time_elapsed = self.current_time - self.start_time;
 
-        let time_ratio: f64 = time_elapsed.value/self.a.value;
 
         // 
         todo!();
@@ -363,7 +360,7 @@ impl DecaySinusoidResponse {
         }
 
         // time ratio is t/tau
-        let time_ratio: Ratio = time_elapsed /  self.a;
+        let time_ratio: Ratio = time_elapsed *  self.a;
         let steady_state_value: f64 = self.steady_state_value();
 
         // otherwise, calculate as per normal
