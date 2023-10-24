@@ -1,4 +1,4 @@
-use uom::si::{f64::*, time::second, frequency::hertz};
+use uom::si::{f64::*, time::second, frequency::hertz, ratio::ratio};
 
 /// second order system with transfer function 
 /// in the form 
@@ -10,7 +10,7 @@ use uom::si::{f64::*, time::second, frequency::hertz};
 /// K_p is process gain (dimensionless, be careful)
 #[derive(Debug,PartialEq, PartialOrd, Clone)]
 pub struct DecayingSinusoid {
-    process_gain: f64,
+    magnitude: f64,
     /// decay frequency or 1/decay time
     a: Frequency,
     previous_timestep_input: f64,
@@ -40,7 +40,7 @@ impl Default for DecayingSinusoid {
     /// frequency in hertz
     fn default() -> Self {
         DecayingSinusoid 
-            { process_gain: 1.0, 
+            { magnitude: 1.0, 
             a: Frequency::new::<hertz>(1.0), 
             previous_timestep_input: 0.0, 
             offset: 0.0, 
@@ -67,7 +67,7 @@ impl DecayingSinusoid {
 
 
         DecayingSinusoid { 
-            process_gain, 
+            magnitude: process_gain, 
             a: decay_frequency, 
             previous_timestep_input: initial_input, 
             offset: initial_value, 
@@ -92,7 +92,7 @@ impl DecayingSinusoid {
 
 
         DecayingSinusoid { 
-            process_gain, 
+            magnitude: process_gain, 
             a: decay_frequency, 
             previous_timestep_input: initial_input, 
             offset: initial_value, 
@@ -120,7 +120,7 @@ impl DecayingSinusoid {
         if input_changed {
             // need to add a response to the vector
 
-            let process_gain = self.process_gain;
+            let process_gain = self.magnitude;
             let process_time = self.a;
             let user_input = current_input - self.previous_timestep_input;
             // the time where the first order response kicks in
@@ -270,7 +270,7 @@ impl DecayingSinusoid {
 /// overdamped stable systems
 #[derive(Debug,PartialEq, PartialOrd, Clone, Copy)]
 pub struct DecaySinusoidResponse {
-    process_gain: f64,
+    magnitude: f64,
     a: Frequency,
     start_time: Time,
     user_input: f64,
@@ -286,7 +286,7 @@ impl Default for DecaySinusoidResponse {
     /// frequency in hertz
     fn default() -> Self {
         DecaySinusoidResponse { 
-            process_gain: 1.0, 
+            magnitude: 1.0, 
             a: Frequency::new::<hertz>(1.0), 
             start_time: Time::new::<second>(0.0), 
             user_input: 1.0, 
@@ -315,7 +315,7 @@ impl DecaySinusoidResponse {
         // or panic (i will use errors maybe later?)
 
         DecaySinusoidResponse { 
-            process_gain, 
+            magnitude: process_gain, 
             a, 
             start_time, 
             user_input, 
@@ -333,9 +333,14 @@ impl DecaySinusoidResponse {
     pub fn is_steady_state(&self) -> bool {
         let time_elapsed = self.current_time - self.start_time;
 
+        //  (at) in exp(-at)
+        let at: Ratio = time_elapsed *  self.a;
+
+        if at > Ratio::new::<ratio>(20.0){
+            return true;
+        }
 
         // 
-        todo!();
 
         return false;
     }
@@ -359,19 +364,39 @@ impl DecaySinusoidResponse {
             return 0.0;
         }
 
-        // time ratio is t/tau
-        let time_ratio: Ratio = time_elapsed *  self.a;
-        let steady_state_value: f64 = self.steady_state_value();
+        // (at) in exp(-at)
+        let steady_state_value: f64 = self.steady_state_value(); 
 
-        // otherwise, calculate as per normal
+        // if we have reached steady state, just return the steady 
+        // state value 
+        if self.is_steady_state() {
+            return steady_state_value;
+        }
 
-        //// u1(t - t1) * Kp * [1-exp(- [t-t1] / tau])
-        //let response: f64 = self.steady_state_value()
-        //    * (1.0 - exponent_ratio.exp());
+        // otherwise, we shall calculate as per normal 
 
-        // need to calculate second order response
-        // which means we need the damping factor or something
-        todo!()
+
+        let response: f64;
+        let at: Ratio = time_elapsed *  self.a;
+        let at: f64 = at.get::<ratio>();
+        let omega_t: Ratio = time_elapsed * self.omega;
+        let omega_t: f64 = omega_t.get::<ratio>();
+
+        response = match self.sinusoid_type {
+            TransferFnSinusoidType::Sine => {
+                self.magnitude 
+                * (-at).exp()
+                * (omega_t).sin()
+            },
+            TransferFnSinusoidType::Cosine => {
+                self.magnitude 
+                * (-at).exp()
+                * (omega_t).cos()
+            },
+        };
+
+        return response;
+
     }
 
     /// steady state value 
