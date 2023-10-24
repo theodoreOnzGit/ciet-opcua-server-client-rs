@@ -3,13 +3,14 @@ pub mod app;
 use local_ip_address::local_ip;
 
 pub use app::*;
+use uom::si::frequency::hertz;
 
-use crate::panels::second_order_transfer_fn::SecondOrderStableTransferFn;
+use crate::panels::{second_order_transfer_fn::SecondOrderStableTransferFn, decaying_sinusoid::DecayingSinusoid};
 fn main() -> eframe::Result<()> {
 
     use core::time;
     use std::{thread, time::SystemTime, ops::DerefMut};
-    use uom::si::{f64::Time, time::{millisecond, second}};
+    use uom::si::{f64::*, time::{millisecond, second}};
     use crate::panels::opcua_panel::try_connect_to_server_and_run_client;
     use crate::first_order_transfer_fn::FirstOrderStableTransferFn;
     
@@ -83,6 +84,16 @@ fn main() -> eframe::Result<()> {
         Time::new::<second>(1.0)
     );
 
+    // decaying sinusoids 
+    let mut g_s_decaying_sine = DecayingSinusoid::new_sine(
+        1.0, 
+        Frequency::new::<hertz>(0.5), 
+        0.0, 
+        0.0, 
+        Time::new::<second>(1.0),
+        Frequency::new::<hertz>(1.5), 
+    );
+
     // this is the thread for the user input and 
     // transfer fn
     thread::spawn(move||{
@@ -108,7 +119,7 @@ fn main() -> eframe::Result<()> {
 
             let current_time = Time::new::<millisecond>(time_elapsed_ms as f64);
 
-            let model_output = g_s_second_order_underdamped.set_user_input_and_calc_output(
+            let model_output = g_s_decaying_sine.set_user_input_and_calc_output(
                 current_time, user_input as f64);
 
             //dbg!(&g_s_second_order_underdamped);

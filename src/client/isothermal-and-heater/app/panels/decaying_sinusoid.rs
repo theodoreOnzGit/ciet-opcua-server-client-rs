@@ -55,7 +55,7 @@ impl Default for DecayingSinusoid {
 impl DecayingSinusoid {
 
     /// constructors 
-    pub fn new_sine(process_gain: f64,
+    pub fn new_sine(magnitude: f64,
         decay_frequency: Frequency,
         initial_input: f64,
         initial_value: f64,
@@ -67,7 +67,7 @@ impl DecayingSinusoid {
 
 
         DecayingSinusoid { 
-            magnitude: process_gain, 
+            magnitude: magnitude, 
             a: decay_frequency, 
             previous_timestep_input: initial_input, 
             offset: initial_value, 
@@ -80,7 +80,7 @@ impl DecayingSinusoid {
     }
 
 
-    pub fn new_cosine(process_gain: f64,
+    pub fn new_cosine(magnitude: f64,
         decay_frequency: Frequency,
         initial_input: f64,
         initial_value: f64,
@@ -92,7 +92,7 @@ impl DecayingSinusoid {
 
 
         DecayingSinusoid { 
-            magnitude: process_gain, 
+            magnitude: magnitude, 
             a: decay_frequency, 
             previous_timestep_input: initial_input, 
             offset: initial_value, 
@@ -120,7 +120,7 @@ impl DecayingSinusoid {
         if input_changed {
             // need to add a response to the vector
 
-            let process_gain = self.magnitude;
+            let magnitude = self.magnitude;
             let process_time = self.a;
             let user_input = current_input - self.previous_timestep_input;
             // the time where the first order response kicks in
@@ -130,7 +130,7 @@ impl DecayingSinusoid {
 
             // make a new response
             let new_response = DecaySinusoidResponse::new(
-                process_gain,
+                magnitude,
                 process_time,
                 start_time,
                 user_input,
@@ -151,7 +151,7 @@ impl DecayingSinusoid {
         }
 
         // clean up the vector first
-        self.clear_second_order_response_vector();
+        self.clear_sinusoid_response_vector();
 
         // need to calculate using the list of 
         // first order response vectors as per normal
@@ -174,7 +174,7 @@ impl DecayingSinusoid {
     }
 
     /// clears the item if they have reached steady state
-    fn clear_second_order_response_vector(&mut self){
+    fn clear_sinusoid_response_vector(&mut self){
 
         let index_of_steady_state_result = self.response_vec.iter().position(
             |first_order_response| {
@@ -302,7 +302,7 @@ impl DecaySinusoidResponse {
 
     /// constructor 
     pub fn new(
-        process_gain: f64,
+        magnitude: f64,
         a: Frequency,
         start_time: Time,
         user_input: f64,
@@ -315,7 +315,7 @@ impl DecaySinusoidResponse {
         // or panic (i will use errors maybe later?)
 
         DecaySinusoidResponse { 
-            magnitude: process_gain, 
+            magnitude, 
             a, 
             start_time, 
             user_input, 
@@ -364,16 +364,6 @@ impl DecaySinusoidResponse {
             return 0.0;
         }
 
-        // (at) in exp(-at)
-        let steady_state_value: f64 = self.steady_state_value(); 
-
-        // if we have reached steady state, just return the steady 
-        // state value 
-        if self.is_steady_state() {
-            return steady_state_value;
-        }
-
-        // otherwise, we shall calculate as per normal 
 
 
         let response: f64;
@@ -384,12 +374,14 @@ impl DecaySinusoidResponse {
 
         response = match self.sinusoid_type {
             TransferFnSinusoidType::Sine => {
-                self.magnitude 
+                self.user_input
+                * self.magnitude 
                 * (-at).exp()
                 * (omega_t).sin()
             },
             TransferFnSinusoidType::Cosine => {
-                self.magnitude 
+                self.user_input
+                * self.magnitude 
                 * (-at).exp()
                 * (omega_t).cos()
             },
