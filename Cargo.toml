@@ -7,6 +7,9 @@ edition = "2021"
 name = "client"
 path = "src/client/isothermal-and-heater/main.rs"
 
+[[bin]]
+name = "client-with-feedback"
+path = "src/client/heater-with-reactor-feedback/main.rs"
 
 [[bin]]
 name = "server"
