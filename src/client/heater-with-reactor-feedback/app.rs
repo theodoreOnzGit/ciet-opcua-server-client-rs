@@ -55,7 +55,6 @@ pub struct GuiClient {
 
 #[derive(serde::Deserialize, serde::Serialize,PartialEq,Clone)]
 enum Panel {
-    Simple,
     InputOutput,
     IsothermalCIET,
     HeaterV2BareCIET,
@@ -154,7 +153,6 @@ impl eframe::App for GuiClient {
             ui.separator();
             ui.horizontal( 
                 |ui| {
-                    ui.selectable_value(&mut self.open_panel, Panel::Simple, "Simple User Input"); 
                     ui.selectable_value(&mut self.open_panel, Panel::InputOutput, "Transfer Fn Simulation"); 
                     ui.selectable_value(&mut self.open_panel, Panel::IsothermalCIET, "CIET Isothermal Simulation"); 
                     ui.selectable_value(&mut self.open_panel, Panel::HeaterV2BareCIET, 
@@ -166,9 +164,6 @@ impl eframe::App for GuiClient {
             // just a test widget, shows it's running i guess
 
             match self.open_panel {
-                Panel::Simple => {
-                    self.simple_panel_ui(ui);
-                },
                 Panel::InputOutput => {
                     self.transfer_fn_input_output_panel_ui(ui);
                 },
