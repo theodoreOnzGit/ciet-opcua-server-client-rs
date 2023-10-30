@@ -370,7 +370,7 @@ fn get_reactor_feedback(bt_11_deviation: TemperatureInterval,
     let one_kelvin_interval = 
         TemperatureInterval::new::<uom::si::temperature_interval::kelvin>(1.0);
 
-    let user_input: Ratio = bt_11_deviation/one_kelvin_interval;
+    let bt_11_deviation_ratio: Ratio = bt_11_deviation/one_kelvin_interval;
 
     // this is for transfer function 
     //
@@ -380,7 +380,7 @@ fn get_reactor_feedback(bt_11_deviation: TemperatureInterval,
 
     let output_second_order_term: Power = gain_for_part1 
         * one_kelvin_interval
-        * transfer_fn_part1.set_user_input_and_calc(user_input, 
+        * transfer_fn_part1.set_user_input_and_calc(bt_11_deviation_ratio, 
             current_time).unwrap();
 
     
@@ -393,7 +393,7 @@ fn get_reactor_feedback(bt_11_deviation: TemperatureInterval,
     //
     // in time domain, there is an intermediate input...
     let intermediate_input: Ratio = 
-        transfer_fn_part2.set_user_input_and_calc(user_input, 
+        transfer_fn_part2.set_user_input_and_calc(bt_11_deviation_ratio, 
             current_time).unwrap();
 
     let output_third_order_term: Power = 
