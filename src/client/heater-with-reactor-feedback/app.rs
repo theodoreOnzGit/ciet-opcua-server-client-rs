@@ -88,7 +88,7 @@ impl Default for GuiClient {
                 ip_addr)),
             bt11_temp_deg_c: Arc::new(Mutex::new(79.12)),
             bt12_temp_deg_c: Arc::new(Mutex::new(79.12)),
-            heater_power_kilowatts: Arc::new(Mutex::new(8.5)),
+            heater_power_kilowatts: Arc::new(Mutex::new(8.0)),
             heater_v2_bare_ciet_plots_ptr: Arc::new(
                 Mutex::new(vec![])
             ),

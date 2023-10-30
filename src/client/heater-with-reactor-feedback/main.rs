@@ -3,6 +3,7 @@ pub mod app;
 use local_ip_address::local_ip;
 
 pub use app::*;
+use uom::si::power::kilowatt;
 use uom::si::thermal_conductance::watt_per_kelvin;
 use uom::si::thermodynamic_temperature::degree_celsius;
 use uom::{si::frequency::hertz, ConstZero};
@@ -113,11 +114,11 @@ fn main() -> eframe::Result<()> {
         ).unwrap().into();
 
     //          -1.87086e-6 + 0.00101128 s + 0.000119 s^2
-    // G(s) = ------------------------------------------- *(340.136) * 
+    // G(s) = ------------------------------------------- *(-340.136) * 
     //          s^2 + 0.0007903 s + 6.667e-7
     //
     //          
-    //            (-4.5)
+    //            (4.5)
     //          -------------
     //          0.1 s + 1
     // 
@@ -128,10 +129,31 @@ fn main() -> eframe::Result<()> {
     let mut heater_inlet_temp_to_heater_power_part_2: TransferFn 
         = TransferFnFirstOrder::new(
             Time::ZERO, 
-            Ratio::new::<ratio>(-4.5), 
+            Ratio::new::<ratio>(4.5), 
             Time::new::<second>(0.1), 
             Ratio::new::<ratio>(1.0), 
         ).unwrap().into();
+
+    let mut heater_inlet_temp_to_heater_power_part_3: TransferFn 
+        = TransferFnSecondOrder::new(
+            Time::new::<second>(0.000119)* Time::new::<second>(1.0), 
+            Time::new::<second>(0.000101128), 
+            - Ratio::new::<ratio>(1.87086e-6), 
+            Time::new::<second>(1.0)* Time::new::<second>(1.0), 
+            Time::new::<second>(0.0007903), 
+            Ratio::new::<ratio>(6.667e-7),
+        ).unwrap().into();
+
+    // now spawn a new writer for the heater 
+
+    let mut reference_csv_writer = 
+        heater_inlet_temp_to_heater_outlet_temp_transfer_fn.
+        spawn_writer("reference_heater_inlet_and_outlet_temp"
+            .to_owned()).unwrap();
+
+    let mut reactor_feedback_csv_writer = 
+        heater_inlet_temp_to_heater_power_part_2.spawn_writer(
+            "reactor_inlet_outlet_temp".to_owned()).unwrap();
 
     // this is the thread for the user input and 
     // transfer fn
@@ -225,6 +247,7 @@ fn main() -> eframe::Result<()> {
 
             let time_elapsed_ms = time_now.elapsed().unwrap().as_millis();
             let time_elapsed_s: f64 = time_elapsed_ms as f64 / 1000 as f64;
+            let current_time = Time::new::<second>(time_elapsed_s);
 
             let loop_pressure_drop_pascals: f32 = 
                 pressure_pascals_input_clone.lock().unwrap().deref_mut().clone();
@@ -242,15 +265,59 @@ fn main() -> eframe::Result<()> {
             bt11_temp_deg_c_ptr_clone.lock().unwrap().deref_mut().clone();
             let bt12_temp_deg_c: f32 = 
             bt12_temp_deg_c_ptr_clone.lock().unwrap().deref_mut().clone();
-            let heater_power_kilowatts: f32 = 
+            let mut heater_power_kilowatts: f32 = 
             heater_power_kilowatts_ptr_clone.lock().unwrap().deref_mut().clone();
 
             // changes in inlet temperature will result in reactor feedback 
-            let bt_11_temp_deviation_deg_c: f32 = bt12_temp_deg_c - 79.12;
+            let bt_11_temp_deviation: TemperatureInterval = 
+                TemperatureInterval::new::<uom::si::temperature_interval::degree_celsius>(
+                    (bt12_temp_deg_c - 79.12) as f64);
 
             // deviation will be fed into transfer function
-            
+            // for reference
+            let bt12_expected_outlet_temp: ThermodynamicTemperature 
+                = get_expected_temperature(bt_11_temp_deviation, 
+                    current_time, 
+                    &mut heater_inlet_temp_to_heater_outlet_temp_transfer_fn);
+            // bind the writer first 
 
+            let reference_reactor_feedback_writer_ptr = 
+                &mut reference_csv_writer;
+
+            // record reference feedback
+            heater_inlet_temp_to_heater_outlet_temp_transfer_fn.
+                csv_write_values(
+                    reference_reactor_feedback_writer_ptr, 
+                    current_time, 
+                    (bt11_temp_deg_c as f64).into(), 
+                    bt12_expected_outlet_temp.get::<degree_celsius>().into()
+                ).unwrap();
+
+            // now let's obtain the power signal
+
+            let reactor_power_signal: Power = 
+                get_reactor_feedback(
+                    bt_11_temp_deviation, 
+                    current_time, 
+                    &mut heater_inlet_temp_to_heater_power_part_1, 
+                    &mut heater_inlet_temp_to_heater_power_part_2, 
+                    &mut heater_inlet_temp_to_heater_power_part_3);
+
+            heater_power_kilowatts = 
+                reactor_power_signal.get::<kilowatt>() as f32;
+
+            // write csv
+
+            let reactor_feedback_csv_writer_ptr = 
+                &mut reactor_feedback_csv_writer;
+
+            heater_inlet_temp_to_heater_power_part_1.
+                csv_write_values(
+                    reactor_feedback_csv_writer_ptr, 
+                    current_time, 
+                    (bt11_temp_deg_c as f64).into(), 
+                    (bt12_temp_deg_c as f64).into()
+                ).unwrap();
             
             heater_v2_bare_ciet_plots_ptr_clone.lock().unwrap().deref_mut()
                 .push([
@@ -283,15 +350,59 @@ fn main() -> eframe::Result<()> {
 fn get_reactor_feedback(bt_11_deviation: TemperatureInterval,
     current_time: Time,
     transfer_fn_part1: &mut TransferFn,
-    transfer_fn_part2: &mut TransferFn) -> Power {
+    transfer_fn_part2: &mut TransferFn,
+    transfer_fn_part3: &mut TransferFn) -> Power {
 
     let gain_for_part1 = ThermalConductance::new::<watt_per_kelvin>(
         3401.36);
 
-    let gain_for_part2 = ThermalConductance::new::<watt_per_kelvin>(
+    let gain_for_part2 = -ThermalConductance::new::<watt_per_kelvin>(
         340.136);
 
-    todo!();
+    let one_kelvin_interval = 
+        TemperatureInterval::new::<uom::si::temperature_interval::kelvin>(1.0);
+
+    let user_input: Ratio = bt_11_deviation/one_kelvin_interval;
+
+    // this is for transfer function 
+    //
+    // 3401.36 * 
+    // (-1.87085e-6 + 0.00101128 s + 0.000119 s^2)/
+    // (s^2 + 0.0007903 + 6.667e-7)
+
+    let output_second_order_term: Power = gain_for_part1 
+        * one_kelvin_interval
+        * transfer_fn_part1.set_user_input_and_calc(user_input, 
+            current_time).unwrap();
+
+    
+    // this is for transfer function 
+    //
+    // -340.136 * 
+    // (4.5)/(0.1 s+1)
+    // (-1.87085e-6 + 0.00101128 s + 0.000119 s^2)/
+    // (s^2 + 0.0007903 + 6.667e-7)
+    //
+    // in time domain, there is an intermediate input...
+    let intermediate_input: Ratio = 
+        transfer_fn_part2.set_user_input_and_calc(user_input, 
+            current_time).unwrap();
+
+    let output_third_order_term: Power = 
+        gain_for_part2
+        * one_kelvin_interval
+        * transfer_fn_part3.set_user_input_and_calc(
+            intermediate_input, current_time).unwrap();
+
+    let power_signal = output_second_order_term + output_third_order_term
+        + Power::new::<uom::si::power::kilowatt>(8.0);
+
+    // check if power signal less than 0 
+    if power_signal < Power::ZERO {
+        return Power::ZERO;
+    }
+
+    return power_signal;
 
 }
 
