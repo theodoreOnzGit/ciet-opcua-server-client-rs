@@ -3,7 +3,12 @@ pub mod app;
 use local_ip_address::local_ip;
 
 pub use app::*;
-use uom::si::frequency::hertz;
+use uom::si::thermal_conductance::watt_per_kelvin;
+use uom::si::thermodynamic_temperature::degree_celsius;
+use uom::{si::frequency::hertz, ConstZero};
+use uom::si::ratio::ratio;
+use uom::si::f64::*;
+use chem_eng_real_time_process_control_simulator::alpha_nightly::prelude::*;
 
 use crate::panels::{second_order_transfer_fn::SecondOrderStableTransferFn, decaying_sinusoid::DecayingSinusoid};
 fn main() -> eframe::Result<()> {
@@ -12,7 +17,6 @@ fn main() -> eframe::Result<()> {
     use std::{thread, time::SystemTime, ops::DerefMut};
     use uom::si::{f64::*, time::{millisecond, second}};
     use crate::panels::opcua_panel::try_connect_to_server_and_run_client;
-    use crate::first_order_transfer_fn::FirstOrderStableTransferFn;
     
     
 
@@ -35,8 +39,8 @@ fn main() -> eframe::Result<()> {
 
     // for opcua 
 
-    let opcua_input_clone = gui_app.loop_pressure_drop_pump_pressure_pascals_input.clone();
-    let opcua_output_clone = gui_app.mass_flowrate_kg_per_s_output.clone();
+    let pressure_pascals_input_clone = gui_app.loop_pressure_drop_pump_pressure_pascals_input.clone();
+    let mass_flowrate_output_clone = gui_app.mass_flowrate_kg_per_s_output.clone();
     let isothermal_ciet_plot_ptr_clone = gui_app.isothermal_ciet_plots_ptr.clone();
     let opcua_ip_addr_ptr_clone = gui_app.opcua_server_ip_addr.clone();
 
@@ -45,15 +49,6 @@ fn main() -> eframe::Result<()> {
     let heater_power_kilowatts_ptr_clone = gui_app.heater_power_kilowatts.clone();
     let heater_v2_bare_ciet_plots_ptr_clone = gui_app.heater_v2_bare_ciet_plots_ptr.clone();
 
-    // let's make a first order transfer fn 
-    // G(s)
-    let mut _g_s_first_order = FirstOrderStableTransferFn::new(
-        1.0, 
-        Time::new::<second>(1.0), 
-        0.0, 
-        0.0, 
-        Time::new::<second>(4.0)
-        );
 
     // this is for testing second order transfer fn 
     // G(s)
@@ -66,23 +61,6 @@ fn main() -> eframe::Result<()> {
         Time::new::<second>(1.0)
     );
 
-    let mut _g_s_second_order_crit_damped = SecondOrderStableTransferFn::new(
-        1.0, // process gain
-        Time::new::<second>(1.0),  // process time
-        1.0, // damping factor
-        0.0, 
-        0.0, 
-        Time::new::<second>(1.0)
-    );
-
-    let mut _g_s_second_order_over_damped = SecondOrderStableTransferFn::new(
-        1.0, // process gain
-        Time::new::<second>(1.0),  // process time
-        2.15, // damping factor
-        0.0, 
-        0.0, 
-        Time::new::<second>(1.0)
-    );
 
     // decaying sinusoids 
     let mut g_s_decaying_sine = DecayingSinusoid::new_sine(
@@ -102,6 +80,59 @@ fn main() -> eframe::Result<()> {
         Time::new::<second>(1.0),
         Frequency::new::<hertz>(1.5), 
     );
+
+    //          0.000119s - 2.201e-7
+    // G(s) = -----------------------------
+    //          s^2 + 0.0007903 s + 6.667e-7
+    let mut heater_inlet_temp_to_heater_outlet_temp_transfer_fn: TransferFn 
+        = TransferFnSecondOrder::new(
+            Time::ZERO * Time::ZERO, 
+            Time::new::<second>(0.000119), 
+            - Ratio::new::<ratio>(2.201e-7), 
+            Time::new::<second>(1.0)* Time::new::<second>(1.0), 
+            Time::new::<second>(0.0007903), 
+            Ratio::new::<ratio>(6.667e-7),
+        ).unwrap().into();
+
+    //          -1.87086e-6 + 0.00101128 s + 0.000119 s^2
+    // G(s) = ------------------------------------------- *3401.36
+    //          s^2 + 0.0007903 s + 6.667e-7
+    //
+    // For now, I'll just do without the gain. 
+    // The gain of 3401.36 
+    // is in units of kelvin/watt
+    //
+    let mut heater_inlet_temp_to_heater_power_part_1: TransferFn 
+        = TransferFnSecondOrder::new(
+            Time::new::<second>(0.000119)* Time::new::<second>(1.0), 
+            Time::new::<second>(0.000101128), 
+            - Ratio::new::<ratio>(1.87086e-6), 
+            Time::new::<second>(1.0)* Time::new::<second>(1.0), 
+            Time::new::<second>(0.0007903), 
+            Ratio::new::<ratio>(6.667e-7),
+        ).unwrap().into();
+
+    //          -1.87086e-6 + 0.00101128 s + 0.000119 s^2
+    // G(s) = ------------------------------------------- *(340.136) * 
+    //          s^2 + 0.0007903 s + 6.667e-7
+    //
+    //          
+    //            (-4.5)
+    //          -------------
+    //          0.1 s + 1
+    // 
+    //
+    // looks like I just a first order transfer function
+    // For now, I'll just do without the gain. 
+    // The gain of 340.136 is in units of kelvin/watt
+    let mut heater_inlet_temp_to_heater_power_part_2: TransferFn 
+        = TransferFnFirstOrder::new(
+            Time::ZERO, 
+            Ratio::new::<ratio>(-4.5), 
+            Time::new::<second>(0.1), 
+            Ratio::new::<ratio>(1.0), 
+        ).unwrap().into();
+
     // this is the thread for the user input and 
     // transfer fn
     thread::spawn(move||{
@@ -165,8 +196,8 @@ fn main() -> eframe::Result<()> {
         let mut connection_result = try_connect_to_server_and_run_client(
             &endpoint,
             2,
-            opcua_input_clone.clone(),
-            opcua_output_clone.clone(),
+            pressure_pascals_input_clone.clone(),
+            mass_flowrate_output_clone.clone(),
             bt12_temp_deg_c_ptr_clone.clone(),
             bt11_temp_deg_c_ptr_clone.clone(),
             heater_power_kilowatts_ptr_clone.clone());
@@ -184,8 +215,8 @@ fn main() -> eframe::Result<()> {
                 connection_result = try_connect_to_server_and_run_client(
                     &endpoint,
                     2,
-                    opcua_input_clone.clone(),
-                    opcua_output_clone.clone(),
+                    pressure_pascals_input_clone.clone(),
+                    mass_flowrate_output_clone.clone(),
                     bt12_temp_deg_c_ptr_clone.clone(),
                     bt11_temp_deg_c_ptr_clone.clone(),
                     heater_power_kilowatts_ptr_clone.clone());
@@ -196,9 +227,9 @@ fn main() -> eframe::Result<()> {
             let time_elapsed_s: f64 = time_elapsed_ms as f64 / 1000 as f64;
 
             let loop_pressure_drop_pascals: f32 = 
-                opcua_input_clone.lock().unwrap().deref_mut().clone();
+                pressure_pascals_input_clone.lock().unwrap().deref_mut().clone();
             let mass_flowrate_kg_per_s: f32 = 
-                opcua_output_clone.lock().unwrap().deref_mut().clone();
+                mass_flowrate_output_clone.lock().unwrap().deref_mut().clone();
 
             isothermal_ciet_plot_ptr_clone.lock().unwrap().deref_mut()
                 .push([
@@ -213,6 +244,13 @@ fn main() -> eframe::Result<()> {
             bt12_temp_deg_c_ptr_clone.lock().unwrap().deref_mut().clone();
             let heater_power_kilowatts: f32 = 
             heater_power_kilowatts_ptr_clone.lock().unwrap().deref_mut().clone();
+
+            // changes in inlet temperature will result in reactor feedback 
+            let bt_11_temp_deviation_deg_c: f32 = bt12_temp_deg_c - 79.12;
+
+            // deviation will be fed into transfer function
+            
+
             
             heater_v2_bare_ciet_plots_ptr_clone.lock().unwrap().deref_mut()
                 .push([
@@ -240,4 +278,44 @@ fn main() -> eframe::Result<()> {
         native_options,
         Box::new(|_cc| Box::new(gui_app)),
     )
+}
+
+fn get_reactor_feedback(bt_11_deviation: TemperatureInterval,
+    current_time: Time,
+    transfer_fn_part1: &mut TransferFn,
+    transfer_fn_part2: &mut TransferFn) -> Power {
+
+    let gain_for_part1 = ThermalConductance::new::<watt_per_kelvin>(
+        3401.36);
+
+    let gain_for_part2 = ThermalConductance::new::<watt_per_kelvin>(
+        340.136);
+
+    todo!();
+
+}
+
+fn get_expected_temperature(bt_11_deviation: TemperatureInterval,
+    current_time: Time,
+    reactor_feedback_reference_transfer_fn: &mut TransferFn) -> ThermodynamicTemperature {
+
+
+    let one_kelvin_interval = 
+        TemperatureInterval::new::<uom::si::temperature_interval::kelvin>(1.0);
+
+    let bt_11_deviation_ratio = bt_11_deviation/one_kelvin_interval;
+
+    let bt_12_temperature_interval_ratio: Ratio = reactor_feedback_reference_transfer_fn
+        .set_user_input_and_calc(
+            bt_11_deviation_ratio, current_time).unwrap();
+
+    let bt_12_temperature_interval: TemperatureInterval
+        = bt_12_temperature_interval_ratio * one_kelvin_interval;
+
+    let bt_12_expected_temperature: ThermodynamicTemperature 
+        = ThermodynamicTemperature::new::<degree_celsius>(102.41)
+        + bt_12_temperature_interval;
+
+    return bt_12_expected_temperature;
+
 }
