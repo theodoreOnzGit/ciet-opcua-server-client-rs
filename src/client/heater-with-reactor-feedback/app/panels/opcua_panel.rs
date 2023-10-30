@@ -582,7 +582,7 @@ pub fn try_connect_to_server_and_run_client(endpoint: &str,
             //    &[2], 
             //    TimestampsToReturn::Both, 
             //    1000.0)?;
-            thread::sleep(time::Duration::from_millis(100));
+            thread::sleep(time::Duration::from_millis(70));
         }
 
         //let stop_session = false;

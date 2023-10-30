@@ -265,8 +265,6 @@ fn main() -> eframe::Result<()> {
             bt11_temp_deg_c_ptr_clone.lock().unwrap().deref_mut().clone();
             let bt12_temp_deg_c: f32 = 
             bt12_temp_deg_c_ptr_clone.lock().unwrap().deref_mut().clone();
-            let mut heater_power_kilowatts: f32 = 
-            heater_power_kilowatts_ptr_clone.lock().unwrap().deref_mut().clone();
 
             // changes in inlet temperature will result in reactor feedback 
             let bt_11_temp_deviation: TemperatureInterval = 
@@ -303,8 +301,16 @@ fn main() -> eframe::Result<()> {
                     &mut heater_inlet_temp_to_heater_power_part_2, 
                     &mut heater_inlet_temp_to_heater_power_part_3);
 
-            heater_power_kilowatts = 
+            // heater ptr lock 
+
+            let mut heater_ptr_lock = 
+                heater_power_kilowatts_ptr_clone.lock().unwrap();
+
+            *heater_ptr_lock = reactor_power_signal.get::<kilowatt>() as f32;
+
+            let heater_power_kilowatts: f32 = 
                 reactor_power_signal.get::<kilowatt>() as f32;
+
 
             // write csv
 
