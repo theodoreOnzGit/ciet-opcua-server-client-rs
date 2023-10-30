@@ -310,6 +310,8 @@ fn main() -> eframe::Result<()> {
 
             let heater_power_kilowatts: f32 = 
                 reactor_power_signal.get::<kilowatt>() as f32;
+            // drop the lock 
+            drop(heater_ptr_lock);
 
 
             // write csv

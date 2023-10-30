@@ -1,12 +1,14 @@
 use std::{ops::DerefMut, thread, time};
 
 use egui::Ui;
+use uom::si::power::kilowatt;
 
 use crate::GuiClient;
 use egui_plot::{Legend, Line, Plot, PlotPoints};
 use opcua::client::prelude::*;
 use opcua::sync::RwLock;
 use std::sync::{Arc, Mutex};
+use uom::si::f64::*;
 
 impl GuiClient {
     
@@ -193,11 +195,32 @@ impl GuiClient {
         ui.add(egui::Spinner::new());
         // slider changes the user input value
         // and we release the mutex lock immediately
+        //
+        // also have a binding for heater inlet temperature, release 
+        // mutex lock immediately
         {
             let mut binding = self.heater_power_kilowatts.lock().unwrap();
-            let user_input_value = binding.deref_mut();
-            ui.add(egui::Slider::new(user_input_value, 0.0..=10.0).
-                text("user heater power input (kW)"));
+            let user_heater_power_input_value = binding.deref_mut();
+
+            let heater_power: Power = Power::new::<kilowatt>(
+                *user_heater_power_input_value as f64);
+
+            let heater_power_kilowatts_string = ((heater_power.get::<kilowatt>()
+                *1000.0).round()/1000.0).to_string();
+
+            let heater_power_diagnostic: String = 
+            "Heater Power: ".to_string() + 
+            &heater_power_kilowatts_string + " kilowatts";
+            
+            ui.horizontal(|ui| {
+                ui.set_height(0.0);
+                ui.label(&heater_power_diagnostic);
+            });
+            let mut inlet_temp_binding 
+            = self.bt11_temp_deg_c.lock().unwrap();
+
+            ui.add(egui::Slider::new(inlet_temp_binding.deref_mut(), 65.0..=100.0).
+                text("user set inlet temperature (degree_celsius)"));
 
         }
 
