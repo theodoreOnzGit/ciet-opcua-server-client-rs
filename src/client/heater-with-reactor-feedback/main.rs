@@ -3,7 +3,7 @@ pub mod app;
 use local_ip_address::local_ip;
 
 pub use app::*;
-use uom::si::power::kilowatt;
+use uom::si::power::{kilowatt, watt};
 use uom::si::thermal_conductance::watt_per_kelvin;
 use uom::si::thermodynamic_temperature::degree_celsius;
 use uom::{si::frequency::hertz, ConstZero};
@@ -73,14 +73,6 @@ fn main() -> eframe::Result<()> {
         Frequency::new::<hertz>(1.5), 
     );
 
-    let mut _g_s_decaying_cosine = DecayingSinusoid::new_cosine(
-        1.0, 
-        Frequency::new::<hertz>(0.5), 
-        0.0, 
-        0.0, 
-        Time::new::<second>(1.0),
-        Frequency::new::<hertz>(1.5), 
-    );
 
     //          0.000119s - 2.201e-7
     // G(s) = -----------------------------
@@ -144,6 +136,27 @@ fn main() -> eframe::Result<()> {
             Ratio::new::<ratio>(6.667e-7),
         ).unwrap().into();
 
+    // create a PI controller and PD controller 
+    //
+    // using IMC derived from Chien and Fruehauf,
+    //
+    // alpha is 0.1, which is the constant for the derivative filter
+    let kc_gain_watt_per_degree_ratio: Ratio = 
+        Ratio::new::<ratio>(3174.0);
+
+    let integral_time: Time = Time::new::<second>(14.0);
+    let derivative_time: Time = Time::new::<second>(3.339);
+    let alpha = Ratio::new::<ratio>(0.1);
+
+    let mut pi_controller: AnalogController = 
+        AnalogController::new_pi_controller(
+            kc_gain_watt_per_degree_ratio, integral_time).unwrap();
+
+    let mut pd_controller: AnalogController = 
+        AnalogController::new_filtered_pd_controller(
+            Ratio::new::<ratio>(1.0), 
+            derivative_time,
+            alpha).unwrap();
     // now spawn a new writer for the heater 
 
     let mut reference_csv_writer = 
@@ -299,14 +312,26 @@ fn main() -> eframe::Result<()> {
                 ).unwrap();
 
             // now let's obtain the power signal
+            {
+                // might deprecate this bit
+                let _reactor_power_signal: Power = 
+                    get_reactor_feedback_with_transfer_fn_depracated(
+                        bt_11_temp_deviation, 
+                        current_time, 
+                        &mut heater_inlet_temp_to_heater_power_part_1, 
+                        &mut heater_inlet_temp_to_heater_power_part_2, 
+                        &mut heater_inlet_temp_to_heater_power_part_3);
+            }
+
 
             let reactor_power_signal: Power = 
-                get_reactor_feedback(
-                    bt_11_temp_deviation, 
+                get_reactor_feedback_using_pi_pd(
+                    bt12_expected_outlet_temp, 
+                    ThermodynamicTemperature::new::<degree_celsius>(
+                        bt12_temp_deg_c as f64), 
                     current_time, 
-                    &mut heater_inlet_temp_to_heater_power_part_1, 
-                    &mut heater_inlet_temp_to_heater_power_part_2, 
-                    &mut heater_inlet_temp_to_heater_power_part_3);
+                    &mut pi_controller, 
+                    &mut pd_controller);
 
             // heater ptr lock 
 
@@ -362,7 +387,68 @@ fn main() -> eframe::Result<()> {
     )
 }
 
-fn get_reactor_feedback(bt_11_deviation: TemperatureInterval,
+fn get_reactor_feedback_using_pi_pd(
+    set_point: ThermodynamicTemperature,
+    current_heater_outlet_temp: ThermodynamicTemperature,
+    current_time: Time,
+    pi_control: &mut AnalogController,
+    pd_control: &mut AnalogController) -> Power {
+
+    // I have a control block using a PI, PD controller 
+    //
+    // the PD controller has gain one, and user set derivative time 
+
+    let heater_outlet_steady_state_temp: ThermodynamicTemperature = 
+        ThermodynamicTemperature::new::<degree_celsius>(102.41);
+
+    let heater_outlet_temp_deviation: TemperatureInterval = 
+        TemperatureInterval::new::<uom::si::temperature_interval::kelvin>(
+            current_heater_outlet_temp.get::<degree_celsius>() - 
+            heater_outlet_steady_state_temp.get::<degree_celsius>()
+        );
+
+    let one_kelvin_interval =
+        TemperatureInterval::new::<uom::si::temperature_interval::kelvin>(1.0);
+    // change into a ratio 
+    let heater_outlet_temp_ratio: Ratio = 
+        heater_outlet_temp_deviation / 
+        one_kelvin_interval;
+
+
+    // feed deviation into pd controller and get output
+
+    let y_filtered_pd_controller_output: Ratio = 
+        pd_control.set_user_input_and_calc(heater_outlet_temp_ratio, 
+            current_time).unwrap();
+
+    let y_filtered_pd_controller_output_temp: ThermodynamicTemperature = 
+        heater_outlet_steady_state_temp +
+        y_filtered_pd_controller_output * one_kelvin_interval;
+        
+
+    // error = y_sp - y_filtered_pd
+
+    let error: TemperatureInterval = TemperatureInterval::new::<
+        uom::si::temperature_interval::degree_celsius>(
+            set_point.get::<degree_celsius>()
+            - y_filtered_pd_controller_output_temp.get::<degree_celsius>());
+
+    // feed error into pi controller 
+
+    let pi_controller_input: Ratio = error / one_kelvin_interval;
+
+    let pi_controller_output: Ratio = pi_control.set_user_input_and_calc(
+        pi_controller_input, current_time).unwrap();
+
+    let one_watt = Power::new::<watt>(1.0);
+
+    let pi_controller_power_signal: Power = 
+        pi_controller_output * one_watt + Power::new::<kilowatt>(8.0);
+
+    pi_controller_power_signal
+}
+
+fn get_reactor_feedback_with_transfer_fn_depracated(bt_11_deviation: TemperatureInterval,
     current_time: Time,
     transfer_fn_part1: &mut TransferFn,
     transfer_fn_part2: &mut TransferFn,
