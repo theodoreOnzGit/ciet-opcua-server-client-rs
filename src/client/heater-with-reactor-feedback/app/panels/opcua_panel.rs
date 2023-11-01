@@ -113,28 +113,8 @@ impl GuiClient {
 
         // now truncate values that are too old
         // show only last minute 
-        let time_window_seconds = 10.0;
-        if max_time as f64 > time_window_seconds as f64 {
-            // i want to delete time older than time_window_seconds
-            let index_result = time_vec.clone().iter().position(
-                |&time| {
-                    // we check if the time is less than the oldest 
-                    // allowable time 
-                    let oldest_allowable_time = max_time - time_window_seconds;
-                    time < oldest_allowable_time
-                }
-            );
-            let _ = match index_result {
-                Some(index) => {
-                    self.isothermal_ciet_plots_ptr.lock().unwrap().deref_mut().remove(index);
-                },
-                None => {
-                    // do nothing 
-                    ()
-                },
-            };
 
-        }
+        clear_plot_vectors(self, ui, time_vec.clone());
 
 
 
@@ -329,52 +309,7 @@ impl GuiClient {
         bt11_bt12_temp_plot = bt11_bt12_temp_plot.y_axis_label(
             "temperature degree_celsius".to_owned());
 
-        // now truncate values that are too old
-        // show only last minute 
-        let bt_11_bt_12_time_window_seconds = 45.0;
-        if max_time as f64 > bt_11_bt_12_time_window_seconds as f64 {
-            // i want to delete time older than time_window_seconds
-            let index_result = time_vec.clone().iter().position(
-                |&time| {
-                    // we check if the time is less than the oldest 
-                    // allowable time 
-                    let oldest_allowable_time = max_time - bt_11_bt_12_time_window_seconds;
-                    time < oldest_allowable_time
-                }
-            );
-            let _ = match index_result {
-                Some(index) => {
-                    self.heater_v2_bare_ciet_plots_ptr.lock().unwrap().deref_mut().remove(index);
-                },
-                None => {
-                    // do nothing 
-                    ()
-                },
-            };
-
-        }
-
-        if max_time as f64 > bt_11_bt_12_time_window_seconds as f64 {
-            // i want to delete time older than time_window_seconds
-            let index_result = time_vec.clone().iter().position(
-                |&time| {
-                    // we check if the time is less than the oldest 
-                    // allowable time 
-                    let oldest_allowable_time = max_time - bt_11_bt_12_time_window_seconds;
-                    time < oldest_allowable_time
-                }
-            );
-            let _ = match index_result {
-                Some(index) => {
-                    self.reactor_feedback_plot_points_ptr.lock().unwrap().deref_mut().remove(index);
-                },
-                None => {
-                    // do nothing 
-                    ()
-                },
-            };
-
-        }
+        clear_plot_vectors(self, ui, time_vec.clone());
 
         let current_bt12_option = bt12_temp_output_vec.clone().into_iter().last();
         let current_bt12 = match current_bt12_option {
@@ -658,3 +593,105 @@ pub fn try_connect_to_server_and_run_client(endpoint: &str,
 }
 
 
+/// clears plot vectors which are too old
+pub(crate) fn clear_plot_vectors(client: &mut GuiClient,
+    ui: &mut Ui,
+    time_vec: Vec<f64>){
+
+    let max_time = time_vec.clone().into_iter().fold(f64::NEG_INFINITY, f64::max);
+
+    let time_window_seconds = 10.0;
+    if max_time as f64 > time_window_seconds as f64 {
+        // i want to delete time older than time_window_seconds
+        let index_result = time_vec.clone().iter().position(
+            |&time| {
+                // we check if the time is less than the oldest 
+                // allowable time 
+                let oldest_allowable_time = max_time - time_window_seconds;
+                time < oldest_allowable_time
+            }
+        );
+        let _ = match index_result {
+            Some(index) => {
+                client.isothermal_ciet_plots_ptr.lock().unwrap().deref_mut().remove(index);
+            },
+            None => {
+                // do nothing 
+                ()
+            },
+        };
+
+    }
+
+
+    // clear bt11 bt 12 time vectors
+    let bt_11_bt_12_time_window_seconds = 45.0;
+    if max_time as f64 > bt_11_bt_12_time_window_seconds as f64 {
+        // i want to delete time older than time_window_seconds
+        let index_result = time_vec.clone().iter().position(
+            |&time| {
+                // we check if the time is less than the oldest 
+                // allowable time 
+                let oldest_allowable_time = max_time - bt_11_bt_12_time_window_seconds;
+                time < oldest_allowable_time
+            }
+        );
+        let _ = match index_result {
+            Some(index) => {
+                client.heater_v2_bare_ciet_plots_ptr.lock().unwrap().deref_mut().remove(index);
+            },
+            None => {
+                // do nothing 
+                ()
+            },
+        };
+
+    }
+
+    if max_time as f64 > bt_11_bt_12_time_window_seconds as f64 {
+        // i want to delete time older than time_window_seconds
+        let index_result = time_vec.clone().iter().position(
+            |&time| {
+                // we check if the time is less than the oldest 
+                // allowable time 
+                let oldest_allowable_time = max_time - bt_11_bt_12_time_window_seconds;
+                time < oldest_allowable_time
+            }
+        );
+        let _ = match index_result {
+            Some(index) => {
+                client.reactor_feedback_plot_points_ptr.lock().unwrap().deref_mut().remove(index);
+            },
+            None => {
+                // do nothing 
+                ()
+            },
+        };
+
+    }
+    // now truncate values that are too old
+    // show only last minute 
+    let time_window_seconds = 10.0;
+    if max_time as f64 > time_window_seconds as f64 {
+        // i want to delete time older than time_window_seconds
+        let index_result = time_vec.clone().iter().position(
+            |&time| {
+                // we check if the time is less than the oldest 
+                // allowable time 
+                let oldest_allowable_time = max_time - time_window_seconds;
+                time < oldest_allowable_time
+            }
+        );
+        let _ = match index_result {
+            Some(index) => {
+                client.input_output_plots_ptr.lock().unwrap().deref_mut().remove(index);
+            },
+            None => {
+                // do nothing 
+                ()
+            },
+        };
+
+    }
+
+}

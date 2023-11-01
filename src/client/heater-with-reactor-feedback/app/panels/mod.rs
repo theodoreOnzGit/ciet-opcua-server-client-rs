@@ -5,10 +5,7 @@ use egui::Ui;
 use crate::GuiClient;
 use egui_plot::{Legend, Line, Plot, PlotPoints};
 
-pub mod first_order_transfer_fn;
-pub mod second_order_transfer_fn;
 pub mod opcua_panel;
-pub mod decaying_sinusoid;
 
 impl GuiClient {
 
@@ -85,28 +82,7 @@ impl GuiClient {
 
         // now truncate values that are too old
         // show only last minute 
-        let time_window_seconds = 10.0;
-        if max_time as f64 > time_window_seconds as f64 {
-            // i want to delete time older than time_window_seconds
-            let index_result = time_vec.clone().iter().position(
-                |&time| {
-                    // we check if the time is less than the oldest 
-                    // allowable time 
-                    let oldest_allowable_time = max_time - time_window_seconds;
-                    time < oldest_allowable_time
-                }
-            );
-            let _ = match index_result {
-                Some(index) => {
-                    self.input_output_plots_ptr.lock().unwrap().deref_mut().remove(index);
-                },
-                None => {
-                    // do nothing 
-                    ()
-                },
-            };
-
-        }
+        opcua_panel::clear_plot_vectors(self, ui, time_vec);
 
 
 

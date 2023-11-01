@@ -274,7 +274,7 @@ fn main() -> eframe::Result<()> {
             // changes in inlet temperature will result in reactor feedback 
             let bt_11_temp_deviation: TemperatureInterval = 
                 TemperatureInterval::new::<uom::si::temperature_interval::degree_celsius>(
-                    (bt12_temp_deg_c - 79.12) as f64);
+                    (bt11_temp_deg_c - 79.12) as f64);
 
             // deviation will be fed into transfer function
             // for reference
@@ -539,3 +539,4 @@ fn get_expected_temperature(bt_11_deviation: TemperatureInterval,
     return bt_12_expected_temperature;
 
 }
+
