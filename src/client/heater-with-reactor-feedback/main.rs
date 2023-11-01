@@ -445,6 +445,14 @@ fn get_reactor_feedback_using_pi_pd(
     let pi_controller_power_signal: Power = 
         pi_controller_output * one_watt + Power::new::<kilowatt>(8.0);
 
+    // check if power signal less than 0 or more than 10 kW
+    if pi_controller_power_signal < Power::ZERO {
+        return Power::ZERO;
+    }
+    if pi_controller_power_signal > Power::new::<kilowatt>(10.0) {
+        return Power::new::<kilowatt>(10.0);
+    }
+
     pi_controller_power_signal
 }
 
