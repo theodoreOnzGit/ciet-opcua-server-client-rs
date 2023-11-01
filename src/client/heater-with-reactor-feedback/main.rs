@@ -6,7 +6,7 @@ pub use app::*;
 use uom::si::power::{kilowatt, watt};
 use uom::si::thermal_conductance::watt_per_kelvin;
 use uom::si::thermodynamic_temperature::degree_celsius;
-use uom::{si::frequency::hertz, ConstZero};
+use uom::ConstZero;
 use uom::si::ratio::ratio;
 use uom::si::f64::*;
 use chem_eng_real_time_process_control_simulator::alpha_nightly::prelude::*;
