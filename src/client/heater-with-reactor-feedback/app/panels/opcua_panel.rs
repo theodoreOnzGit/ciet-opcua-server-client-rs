@@ -599,8 +599,7 @@ pub(crate) fn clear_plot_vectors(client: &mut GuiClient,
     time_vec: Vec<f64>){
 
     let max_time = time_vec.clone().into_iter().fold(f64::NEG_INFINITY, f64::max);
-
-    let time_window_seconds = 10.0;
+    let time_window_seconds = 60.0;
     if max_time as f64 > time_window_seconds as f64 {
         // i want to delete time older than time_window_seconds
         let index_result = time_vec.clone().iter().position(
@@ -625,7 +624,7 @@ pub(crate) fn clear_plot_vectors(client: &mut GuiClient,
 
 
     // clear bt11 bt 12 time vectors
-    let bt_11_bt_12_time_window_seconds = 45.0;
+    let bt_11_bt_12_time_window_seconds = time_window_seconds;
     if max_time as f64 > bt_11_bt_12_time_window_seconds as f64 {
         // i want to delete time older than time_window_seconds
         let index_result = time_vec.clone().iter().position(
@@ -671,7 +670,6 @@ pub(crate) fn clear_plot_vectors(client: &mut GuiClient,
     }
     // now truncate values that are too old
     // show only last minute 
-    let time_window_seconds = 10.0;
     if max_time as f64 > time_window_seconds as f64 {
         // i want to delete time older than time_window_seconds
         let index_result = time_vec.clone().iter().position(
