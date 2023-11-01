@@ -19,6 +19,7 @@ impl GuiClient {
         ui.add(egui::Slider::new(user_input_value, 0.0..=0.9).
             text("units TBD"));
 
+        drop(binding);
 
         let mut my_plot = Plot::new("My Plot").legend(Legend::default());
 

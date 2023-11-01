@@ -4,7 +4,6 @@ use std::sync::Arc;
 
 use eframe::egui;
 pub mod panels;
-pub use panels::first_order_transfer_fn;
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize,Clone)]

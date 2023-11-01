@@ -11,7 +11,6 @@ use uom::si::ratio::ratio;
 use uom::si::f64::*;
 use chem_eng_real_time_process_control_simulator::alpha_nightly::prelude::*;
 
-use crate::panels::{second_order_transfer_fn::SecondOrderStableTransferFn, decaying_sinusoid::DecayingSinusoid};
 fn main() -> eframe::Result<()> {
 
     use core::time;
@@ -53,26 +52,25 @@ fn main() -> eframe::Result<()> {
 
     // this is for testing second order transfer fn 
     // G(s)
-    let mut g_s_second_order_underdamped = SecondOrderStableTransferFn::new(
-        1.0, // process gain
-        Time::new::<second>(1.0),  // process time
-        0.45, // damping factor
-        0.0, 
-        0.0, 
-        Time::new::<second>(1.0)
-    );
+    let mut g_s_second_order_underdamped: TransferFn = TransferFnSecondOrder::new(
+        Time::ZERO * Time::ZERO, 
+        Time::new::<second>(2.5), 
+        Ratio::new::<ratio>(1.0),
+        Time::new::<second>(1.0)* Time::new::<second>(1.0), 
+        Time::new::<second>(1.0), 
+        Ratio::new::<ratio>(1.75),
+    ).unwrap().into();
 
 
     // decaying sinusoids 
-    let mut g_s_decaying_sine = DecayingSinusoid::new_sine(
-        1.0, 
-        Frequency::new::<hertz>(0.5), 
-        0.0, 
-        0.0, 
-        Time::new::<second>(1.0),
-        Frequency::new::<hertz>(1.5), 
-    );
-
+    let mut g_s_decaying_sine: TransferFn = TransferFnSecondOrder::new(
+        Time::ZERO * Time::ZERO, 
+        Time::new::<second>(2.5), 
+        Ratio::ZERO,
+        Time::new::<second>(1.0)* Time::new::<second>(1.0), 
+        Time::new::<second>(1.0), 
+        Ratio::new::<ratio>(1.75),
+    ).unwrap().into();
 
     //          0.000119s - 2.201e-7
     // G(s) = -----------------------------
@@ -182,15 +180,18 @@ fn main() -> eframe::Result<()> {
             let user_input: f32 = 
                 user_input_ptr_clone.lock().unwrap().deref_mut().clone();
 
+            let user_input_ratio: Ratio = 
+                Ratio::new::<ratio>(user_input as f64);
+
 
             let current_time = Time::new::<millisecond>(time_elapsed_ms as f64);
 
 
-            let model_output_1 = g_s_decaying_sine.set_user_input_and_calc_output(
-                current_time, user_input as f64);
+            let model_output_1 = g_s_decaying_sine.set_user_input_and_calc(
+                user_input_ratio, current_time).unwrap();
 
-            let model_output_2 = g_s_second_order_underdamped.set_user_input_and_calc_output(
-                current_time, user_input as f64);
+            let model_output_2 = g_s_second_order_underdamped.set_user_input_and_calc(
+                user_input_ratio, current_time).unwrap();
             
             let model_output = model_output_1 + model_output_2;
 
@@ -199,7 +200,7 @@ fn main() -> eframe::Result<()> {
 
             input_output_plots_ptr_clone.lock().unwrap().deref_mut()
                 .push([time_elapsed_s,user_input as f64,
-                model_output as f64]);
+                model_output.into()]);
 
             thread::sleep(time::Duration::from_millis(100));
         }

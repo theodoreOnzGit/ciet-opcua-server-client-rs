@@ -595,7 +595,7 @@ pub fn try_connect_to_server_and_run_client(endpoint: &str,
 
 /// clears plot vectors which are too old
 pub(crate) fn clear_plot_vectors(client: &mut GuiClient,
-    ui: &mut Ui,
+    _ui: &mut Ui,
     time_vec: Vec<f64>){
 
     let max_time = time_vec.clone().into_iter().fold(f64::NEG_INFINITY, f64::max);
