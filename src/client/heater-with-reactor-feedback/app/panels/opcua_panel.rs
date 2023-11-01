@@ -303,18 +303,24 @@ impl GuiClient {
             }
         ).collect();
 
+        // now, we also get the expected bt12 outlet temp, which 
+        // acts as a set point for the controller
+        let time_simulated_reactor_feedback_outlet_temp_vec: Vec<[f64;2]> 
+            = self.reactor_feedback_plot_points_ptr.lock().unwrap().deref_mut()
+            .iter().map(|&values| {
+                values
+            }).collect();
+        
+
         let max_time = time_vec.clone().into_iter().fold(f64::NEG_INFINITY, f64::max);
         let max_user_input = bt11_temp_input_vec.clone().into_iter().fold(f64::NEG_INFINITY, f64::max);
 
-        let current_bt11 = bt11_temp_input_vec.clone().into_iter().last();
-        let _current_bt11 = match current_bt11 {
+        let current_bt11_option = bt11_temp_input_vec.clone().into_iter().last();
+        let current_bt11 = match current_bt11_option {
             Some(float) => float,
             None => 0.0,
         };
 
-        // include max x and y values 
-        bt11_bt12_temp_plot = bt11_bt12_temp_plot.include_x(max_time);
-        bt11_bt12_temp_plot = bt11_bt12_temp_plot.include_y(max_user_input);
 
         // axis labels 
         bt11_bt12_temp_plot = bt11_bt12_temp_plot.x_axis_label(
@@ -348,14 +354,41 @@ impl GuiClient {
 
         }
 
-        let current_bt12 = bt12_temp_output_vec.clone().into_iter().last();
-        let _current_bt12 = match current_bt12 {
+        if max_time as f64 > bt_11_bt_12_time_window_seconds as f64 {
+            // i want to delete time older than time_window_seconds
+            let index_result = time_vec.clone().iter().position(
+                |&time| {
+                    // we check if the time is less than the oldest 
+                    // allowable time 
+                    let oldest_allowable_time = max_time - bt_11_bt_12_time_window_seconds;
+                    time < oldest_allowable_time
+                }
+            );
+            let _ = match index_result {
+                Some(index) => {
+                    self.reactor_feedback_plot_points_ptr.lock().unwrap().deref_mut().remove(index);
+                },
+                None => {
+                    // do nothing 
+                    ()
+                },
+            };
+
+        }
+
+        let current_bt12_option = bt12_temp_output_vec.clone().into_iter().last();
+        let current_bt12 = match current_bt12_option {
             Some(float) => float,
             None => 0.0,
         };
 
 
 
+        // include max x and y values 
+        bt11_bt12_temp_plot = bt11_bt12_temp_plot.include_x(max_time);
+        bt11_bt12_temp_plot = bt11_bt12_temp_plot.include_y(max_user_input);
+        bt11_bt12_temp_plot = bt11_bt12_temp_plot.include_y(current_bt11);
+        bt11_bt12_temp_plot = bt11_bt12_temp_plot.include_y(current_bt12);
         // second plot for the 
         ui.separator();
         let mut power_plot = Plot::new("mass flowrate plot").legend(Legend::default());
@@ -393,6 +426,9 @@ impl GuiClient {
                 plot_ui.line(Line::new(PlotPoints::from(
                     time_bt12_vec.clone()
                 )).name("bt12 (heater outlet) temperature deg C"));
+                plot_ui.line(Line::new(PlotPoints::from(
+                    time_simulated_reactor_feedback_outlet_temp_vec.clone()
+                )).name("simulated reactivity bt12 (heater outlet) temperature deg C"));
             });
             power_plot.show(ui, |plot_ui| {
                 plot_ui.line(Line::new(PlotPoints::from(

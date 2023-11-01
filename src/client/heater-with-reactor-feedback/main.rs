@@ -30,8 +30,8 @@ fn main() -> eframe::Result<()> {
     };
     let gui_app = GuiClient::new();
 
-    let plot_values_ptr_clone = gui_app.plot_points_ptr.clone();
-    let rad_value_ptr_clone = gui_app.rad_value_ptr.clone();
+    let reactor_feedback_plot_values_ptr_clone = gui_app.reactor_feedback_plot_points_ptr.clone();
+    let reactor_feedback_expected_outlet_t_ptr_clone = gui_app.reactor_feedback_expected_outlet_temp_ptr.clone();
     let time_now = SystemTime::now();
 
     // for input output plot
@@ -163,14 +163,6 @@ fn main() -> eframe::Result<()> {
             let time_elapsed_s: f64 = time_elapsed_ms as f64 / 1000 as f64;
 
 
-            // push values to vecto64
-            //
-            //dbg!([time_elapsed_s,5.0]);
-            let rad_value: f32 = 
-                rad_value_ptr_clone.lock().unwrap().deref_mut().clone();
-
-            plot_values_ptr_clone.lock().unwrap().deref_mut()
-                .push([time_elapsed_s,rad_value as f64]);
 
             // user inputs and outputs must be editable in real-time and 
             // plotable
@@ -277,7 +269,22 @@ fn main() -> eframe::Result<()> {
                 = get_expected_temperature(bt_11_temp_deviation, 
                     current_time, 
                     &mut heater_inlet_temp_to_heater_outlet_temp_transfer_fn);
-            // bind the writer first 
+            // for reactor temperature, I need to record and plot it
+            {
+                let mut reactor_feedback_ptr_lock = 
+                    reactor_feedback_expected_outlet_t_ptr_clone.lock().unwrap();
+                *reactor_feedback_ptr_lock = 
+                    bt12_expected_outlet_temp.get::<degree_celsius>() as f32;
+
+                let reactor_feedback_temp_value: f32 = 
+                    reactor_feedback_ptr_lock.deref_mut().clone();
+                reactor_feedback_plot_values_ptr_clone.lock().unwrap().deref_mut()
+                    .push([time_elapsed_s,reactor_feedback_temp_value as f64]);
+            }
+
+            // bind the writer next
+            //
+
 
             let reference_reactor_feedback_writer_ptr = 
                 &mut reference_csv_writer;

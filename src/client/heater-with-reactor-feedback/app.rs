@@ -13,11 +13,14 @@ pub struct GuiClient {
     // Example stuff:
     label: String,
 
-    #[serde(skip)] // This how you opt-out of serialization of a field
-    pub rad_value_ptr: Arc<Mutex<f32>>,
+    #[serde(skip)] 
+    // This how you opt-out of serialization of a field 
+    // also, I'm reserving a plot pointer for the simulated reactor 
+    // feedback transfer function output
+    pub reactor_feedback_expected_outlet_temp_ptr: Arc<Mutex<f32>>,
 
     // plot values, locked behind an Arc::mutex lock 
-    pub plot_points_ptr: Arc<Mutex<Vec<[f64;2]>>>,
+    pub reactor_feedback_plot_points_ptr: Arc<Mutex<Vec<[f64;2]>>>,
 
     // for input and output of a simple transfer function
     #[serde(skip)] 
@@ -68,9 +71,9 @@ impl Default for GuiClient {
 
         Self {
             // Example stuff:
-            label: "Roentgen".to_owned(),
-            rad_value_ptr: Arc::new(Mutex::new(3.6)),
-            plot_points_ptr: Arc::new(
+            label: "Simulated Reactor Feedback Expected outlet Temp".to_owned(),
+            reactor_feedback_expected_outlet_temp_ptr: Arc::new(Mutex::new(79.12)),
+            reactor_feedback_plot_points_ptr: Arc::new(
                 Mutex::new(vec![])
             ),
             open_panel: Panel::IsothermalCIET,
