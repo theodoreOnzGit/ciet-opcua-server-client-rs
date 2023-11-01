@@ -142,9 +142,9 @@ fn main() -> eframe::Result<()> {
     //
     // alpha is 0.1, which is the constant for the derivative filter
     let kc_gain_watt_per_degree_ratio: Ratio = 
-        Ratio::new::<ratio>(3174.0);
+        Ratio::new::<ratio>(80.0);
 
-    let integral_time: Time = Time::new::<second>(14.0);
+    let integral_time: Time = Time::new::<second>(7.0);
     let derivative_time: Time = Time::new::<second>(3.339);
     let alpha = Ratio::new::<ratio>(0.1);
 
