@@ -373,6 +373,8 @@ pub fn get_ciet_isothermal_mass_flowrate(
             Pressure::new::<pascal>(pressure_change_value));
 }
 
+
+
 /// obtains pressure change over heater branch 
 /// returns f64 which is python friendly
 ///
@@ -767,4 +769,59 @@ pub fn get_ctah_branch_isothermal_pressure_change_pascals(
             fluid_temp);
 
     return pressure_change_total.get::<pascal>();
+}
+
+
+
+#[test]
+pub fn heater_branch_pressure_change_tests(){
+    // zero flowrate  
+
+    use approx::assert_abs_diff_eq;
+    let mass_rate_kg_per_s = 0.0;
+    let temperature_degrees_c = 21.7;
+    let pressure_change = get_heater_branch_isothermal_pressure_change_pascals(
+        mass_rate_kg_per_s, temperature_degrees_c);
+
+
+    // pressure change should be 39041 +/- 1 Pa
+    assert_abs_diff_eq!( pressure_change, 39041.0, epsilon=1.0,);
+
+    // at 0.18 kg/s
+    let mass_rate_kg_per_s = 0.18;
+    let pressure_change = get_heater_branch_isothermal_pressure_change_pascals(
+        mass_rate_kg_per_s, temperature_degrees_c);
+
+    // pressure change should be 33417 +/- 1 Pa
+    assert_abs_diff_eq!(pressure_change, 33417.0, epsilon=1.0);
+    return ();
+
+}
+
+#[test]
+pub fn ctah_branch_pressure_change_tests(){
+    // zero flowrate  
+
+    use approx::assert_abs_diff_eq;
+    let mass_rate_kg_per_s = 0.0;
+    let temperature_degrees_c = 21.7;
+    let pump_pressure_pascals = 0.0;
+    let pressure_change = get_ctah_branch_isothermal_pressure_change_pascals(
+        mass_rate_kg_per_s, temperature_degrees_c,
+        pump_pressure_pascals);
+
+
+    // pressure change should be 39041 +/- 1 Pa
+    assert_abs_diff_eq!( pressure_change, 39041.0, epsilon=1.0,);
+
+    // at 0.18 kg/s
+    let mass_rate_kg_per_s = 0.18;
+    let pressure_change = get_ctah_branch_isothermal_pressure_change_pascals(
+        mass_rate_kg_per_s, temperature_degrees_c,
+        pump_pressure_pascals);
+
+    // pressure change should be 28751 +/- 1 Pa
+    assert_abs_diff_eq!(pressure_change, 28751.0, epsilon=1.0);
+    return ();
+
 }
