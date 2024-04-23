@@ -825,3 +825,31 @@ pub fn ctah_branch_pressure_change_tests(){
     return ();
 
 }
+
+
+#[test]
+pub fn dhx_branch_pressure_change_tests(){
+    // zero flowrate  
+
+    use approx::assert_abs_diff_eq;
+    let mass_rate_kg_per_s = 0.0;
+    let temperature_degrees_c = 21.7;
+    let pressure_change = get_dhx_branch_isothermal_pressure_change_pascals(
+        mass_rate_kg_per_s, temperature_degrees_c,
+        );
+
+
+    // pressure change should be 39041 +/- 1 Pa
+    assert_abs_diff_eq!( pressure_change, 39041.0, epsilon=1.0,);
+
+    // at 0.18 kg/s
+    let mass_rate_kg_per_s = -0.18;
+    let pressure_change = get_dhx_branch_isothermal_pressure_change_pascals(
+        mass_rate_kg_per_s, temperature_degrees_c,
+        );
+
+    // pressure change should be 44494 +/- 1 Pa
+    assert_abs_diff_eq!(pressure_change, 44494.0, epsilon=1.0);
+    return ();
+
+}
